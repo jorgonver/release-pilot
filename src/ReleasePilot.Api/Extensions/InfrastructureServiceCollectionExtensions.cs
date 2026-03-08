@@ -34,24 +34,33 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<PromotionOutboxEventHandler>();
         services.AddScoped<PromotionTerminalStateNotificationHandler>();
 
+        // Register domain event handlers for each promotion lifecycle event:
+        
+        // Promotion requested domain event
         services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
         services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionOutboxEventHandler>());
-
+        
+        // Promotion approved domain event
         services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
         services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionOutboxEventHandler>());
 
+        // Deployment started domain event
         services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
         services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionOutboxEventHandler>());
 
+        // Promotion completed domain event
         services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
         services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionOutboxEventHandler>());
 
+        // Promotion rolled back domain event
         services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
         services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionOutboxEventHandler>());
 
+        // Promotion cancelled domain event
         services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
         services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionOutboxEventHandler>());
 
+        // Promotion terminal state domain events
         services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
         services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
         services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
