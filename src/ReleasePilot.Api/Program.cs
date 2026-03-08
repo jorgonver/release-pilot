@@ -22,7 +22,7 @@ builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(Rab
 builder.Services.AddScoped<IRequestDispatcher, RequestDispatcher>();
 
 builder.Services.AddSingleton<IPromotionRepository, InMemoryPromotionRepository>();
-builder.Services.AddScoped<IDomainEventDispatcher, InMemoryDomainEventDispatcher>();
+builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 builder.Services.AddSingleton<IDeploymentPort, NoOpDeploymentPort>();
 builder.Services.AddSingleton<IIssueTrackerPort, InMemoryIssueTrackerPort>();
 builder.Services.AddSingleton<INotificationPort, InMemoryNotificationPort>();
