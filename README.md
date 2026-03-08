@@ -18,6 +18,13 @@ cd <repo-root>
 ./scripts/setup-audit-db.sh
 ```
 
+If `psql` is not installed locally, use this Docker-native alternative:
+
+```bash
+cd <repo-root>
+docker exec -i releasepilot-postgres psql -U releasepilot -d releasepilot < sql/audit/001_create_audit_log.sql
+```
+
 3. In a third terminal, run the API smoke test:
 
 ```bash
@@ -330,6 +337,11 @@ docker compose up --build
 ```
 
 `docker-compose.yml` includes a one-shot setup container (`promotions-db-setup`) that applies API schema scripts (`sql/api/*.sql`) automatically for containerized runs.
+
+`promotions-db-setup` is expected to exit after completing its work. This is normal.
+
+- It usually appears as `Exited (0)` in `docker compose ps -a`.
+- It usually does not appear in `docker compose ps` (running containers only).
 
 For containerized runs, audit schema still needs to be created with `scripts/setup-audit-db.sh` (or equivalent SQL execution) before or while starting `audit-worker`.
 

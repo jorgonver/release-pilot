@@ -75,8 +75,8 @@ public sealed class OutboxRepository : IOutboxRepository
             new { BatchSize = batchSize, MaxRetryCount = maxRetryCount },
             cancellationToken: cancellationToken);
 
-        var rows = await connection.QueryAsync<OutboxMessage>(command);
-        return rows.ToArray();
+        var rows = await connection.QueryAsync<OutboxMessageRow>(command);
+        return rows.Select(row => row.ToOutboxMessage()).ToArray();
     }
 
     public async Task MarkProcessedAsync(Guid id, CancellationToken cancellationToken)

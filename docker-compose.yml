@@ -26,13 +26,16 @@ services:
     container_name: releasepilot-promotions-db-setup
     depends_on:
       - postgres
+    restart: "no"
     environment:
       PGPASSWORD: releasepilot
     volumes:
       - ./sql/api:/docker-entrypoint-initdb.d:ro
     command: >
       sh -c "until pg_isready -h postgres -p 5432 -U releasepilot; do sleep 1; done &&
-      for f in /docker-entrypoint-initdb.d/*.sql; do
+      files=$$(find /docker-entrypoint-initdb.d -maxdepth 1 -type f -name '*.sql' | sort) &&
+      if [ -z \"$$files\" ]; then echo 'No SQL files found in /docker-entrypoint-initdb.d'; exit 1; fi &&
+      for f in $$files; do
       psql -h postgres -U releasepilot -d releasepilot -v ON_ERROR_STOP=1 -f \"$$f\"; done"
 
   api:
@@ -41,9 +44,12 @@ services:
       dockerfile: ReleasePilot.Api/Dockerfile
     container_name: releasepilot-api
     depends_on:
-      - rabbitmq
-      - postgres
-      - promotions-db-setup
+      rabbitmq:
+        condition: service_started
+      postgres:
+        condition: service_started
+      promotions-db-setup:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -64,9 +70,12 @@ services:
       dockerfile: ReleasePilot.OutboxPublisher/Dockerfile
     container_name: releasepilot-outbox-publisher
     depends_on:
-      - rabbitmq
-      - postgres
-      - promotions-db-setup
+      rabbitmq:
+        condition: service_started
+      postgres:
+        condition: service_started
+      promotions-db-setup:
+        condition: service_completed_successfully
     environment:
       PromotionRepository__ConnectionString: Host=postgres;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot
       RabbitMq__HostName: rabbitmq
