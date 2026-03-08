@@ -1,5 +1,32 @@
 # Application & Environment Lifecycle Manager
 
+## Quick Start (After Clone, Docker First)
+
+Use this path if you want the fastest way to run the full stack after cloning.
+
+1. Start infrastructure and services:
+
+```bash
+cd /home/jorge/projects/release-pilot
+docker compose up --build
+```
+
+2. In a second terminal, apply audit schema:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/setup-audit-db.sh
+```
+
+3. In a third terminal, run the API smoke test:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/api-smoke-test.sh
+```
+
+If the script ends with `[PASS]`, the project is running correctly.
+
 ## Smoke Test Harness
 
 The repository includes an endpoint smoke test script at `scripts/api-smoke-test.sh`.
@@ -9,6 +36,7 @@ The repository includes an endpoint smoke test script at `scripts/api-smoke-test
 - `.NET SDK 9`
 - `curl`
 - `jq` (for JSON assertions in the script)
+- `psql` (PostgreSQL client, required by DB setup scripts)
 
 Install `jq` on Ubuntu/Debian:
 
@@ -35,14 +63,14 @@ The solution now includes RabbitMQ + Postgres + API + Outbox Publisher Worker + 
 
 ### Start Stack
 
-Promotion schema setup is now an explicit prerequisite. Run it before starting the API:
+For local non-container runs, promotion schema setup is an explicit prerequisite. Run it before starting the API:
 
 ```bash
 cd /home/jorge/projects/release-pilot
 ./scripts/setup-promotion-db.sh
 ```
 
-Optional override for a non-default database target:
+Promotion DB: Optional override for a non-default database target:
 
 ```bash
 PROMOTION_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-promotion-db.sh
@@ -57,7 +85,7 @@ cd /home/jorge/projects/release-pilot
 ./scripts/setup-audit-db.sh
 ```
 
-Optional override for a non-default database target:
+Audit DB: Optional override for a non-default database target:
 
 ```bash
 AUDIT_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-audit-db.sh
@@ -70,7 +98,9 @@ cd /home/jorge/projects/release-pilot
 docker compose up --build
 ```
 
-`docker-compose.yml` also includes a one-shot setup container (`promotions-db-setup`) that applies the promotions schema automatically for containerized runs.
+`docker-compose.yml` includes a one-shot setup container (`promotions-db-setup`) that applies API schema scripts (`sql/api/*.sql`) automatically for containerized runs.
+
+For containerized runs, audit schema still needs to be created with `scripts/setup-audit-db.sh` (or equivalent SQL execution) before/while starting `audit-worker`.
 
 Services:
 
@@ -104,5 +134,52 @@ After invoking API transitions:
 
 ```bash
 docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT event_type, promotion_id, occurred_at, acting_user FROM audit_log ORDER BY id DESC LIMIT 20;"
+```
+
+### Verify Outbox Processing
+
+Inspect pending/processed outbox rows:
+
+```bash
+docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT id, event_type, attempt_count, processed_at, next_attempt_at, last_error, created_at FROM outbox_messages ORDER BY created_at DESC LIMIT 20;"
+```
+
+Check only pending rows:
+
+```bash
+docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT id, event_type, attempt_count, next_attempt_at, last_error FROM outbox_messages WHERE processed_at IS NULL ORDER BY created_at ASC LIMIT 20;"
+```
+
+## Local Run (No Docker)
+
+Use separate terminals after starting local Postgres and RabbitMQ.
+
+1. Apply schemas:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/setup-promotion-db.sh
+./scripts/setup-audit-db.sh
+```
+
+2. Start API:
+
+```bash
+cd /home/jorge/projects/release-pilot/src
+dotnet run --project ReleasePilot.Api
+```
+
+3. Start Outbox Publisher:
+
+```bash
+cd /home/jorge/projects/release-pilot/src
+dotnet run --project ReleasePilot.OutboxPublisher
+```
+
+4. Start Audit Worker:
+
+```bash
+cd /home/jorge/projects/release-pilot/src
+dotnet run --project ReleasePilot.AuditWorker
 ```
 
