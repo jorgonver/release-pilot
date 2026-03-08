@@ -3,7 +3,6 @@ using ReleasePilot.Api.Application.Abstractions;
 using ReleasePilot.Api.Application.Promotions;
 using ReleasePilot.Api.Application.Promotions.Commands;
 using ReleasePilot.Api.Application.Promotions.Queries;
-using ReleasePilot.Api.Domain.Primitives;
 
 namespace ReleasePilot.Api.Controllers;
 
@@ -11,55 +10,28 @@ namespace ReleasePilot.Api.Controllers;
 [ApiController]
 public class PromotionController : ControllerBase
 {
-    private readonly ICommandHandler<RequestPromotionCommand, PromotionDto> _requestPromotionHandler;
-    private readonly ICommandHandler<ApprovePromotionCommand, PromotionDto> _approvePromotionHandler;
-    private readonly ICommandHandler<StartDeploymentCommand, PromotionDto> _startDeploymentHandler;
-    private readonly ICommandHandler<CompletePromotionCommand, PromotionDto> _completePromotionHandler;
-    private readonly ICommandHandler<RollbackPromotionCommand, PromotionDto> _rollbackPromotionHandler;
-    private readonly ICommandHandler<CancelPromotionCommand, PromotionDto> _cancelPromotionHandler;
-    private readonly IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>> _listPromotionsQueryHandler;
-    private readonly IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>> _listApplicationsQueryHandler;
-    private readonly IQueryHandler<GetPromotionByIdQuery, PromotionDto?> _getByIdQueryHandler;
-    private readonly IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult> _listByApplicationQueryHandler;
-    private readonly IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult> _getEnvironmentStatusQueryHandler;
+    private readonly IRequestDispatcher _dispatcher;
 
-    public PromotionController(
-        ICommandHandler<RequestPromotionCommand, PromotionDto> requestPromotionHandler,
-        ICommandHandler<ApprovePromotionCommand, PromotionDto> approvePromotionHandler,
-        ICommandHandler<StartDeploymentCommand, PromotionDto> startDeploymentHandler,
-        ICommandHandler<CompletePromotionCommand, PromotionDto> completePromotionHandler,
-        ICommandHandler<RollbackPromotionCommand, PromotionDto> rollbackPromotionHandler,
-        ICommandHandler<CancelPromotionCommand, PromotionDto> cancelPromotionHandler,
-        IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>> listPromotionsQueryHandler,
-        IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>> listApplicationsQueryHandler,
-        IQueryHandler<GetPromotionByIdQuery, PromotionDto?> getByIdQueryHandler,
-        IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult> listByApplicationQueryHandler,
-        IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult> getEnvironmentStatusQueryHandler)
+    public PromotionController(IRequestDispatcher dispatcher)
     {
-        _requestPromotionHandler = requestPromotionHandler;
-        _approvePromotionHandler = approvePromotionHandler;
-        _startDeploymentHandler = startDeploymentHandler;
-        _completePromotionHandler = completePromotionHandler;
-        _rollbackPromotionHandler = rollbackPromotionHandler;
-        _cancelPromotionHandler = cancelPromotionHandler;
-        _listPromotionsQueryHandler = listPromotionsQueryHandler;
-        _listApplicationsQueryHandler = listApplicationsQueryHandler;
-        _getByIdQueryHandler = getByIdQueryHandler;
-        _listByApplicationQueryHandler = listByApplicationQueryHandler;
-        _getEnvironmentStatusQueryHandler = getEnvironmentStatusQueryHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpGet]
     public async Task<IActionResult> ListPromotions(CancellationToken cancellationToken)
     {
-        var result = await _listPromotionsQueryHandler.HandleAsync(new ListPromotionsQuery(), cancellationToken);
+        var result = await _dispatcher.SendQueryAsync<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>>(
+            new ListPromotionsQuery(),
+            cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("applications")]
     public async Task<IActionResult> ListApplications(CancellationToken cancellationToken)
     {
-        var result = await _listApplicationsQueryHandler.HandleAsync(new ListApplicationsQuery(), cancellationToken);
+        var result = await _dispatcher.SendQueryAsync<ListApplicationsQuery, IReadOnlyCollection<string>>(
+            new ListApplicationsQuery(),
+            cancellationToken);
         return Ok(result);
     }
 
@@ -70,39 +42,27 @@ public class PromotionController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var result = await _listByApplicationQueryHandler.HandleAsync(
-                new ListPromotionsByApplicationQuery(applicationName, page, pageSize),
-                cancellationToken);
-            return Ok(result);
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var result = await _dispatcher.SendQueryAsync<ListPromotionsByApplicationQuery, PaginatedPromotionsResult>(
+            new ListPromotionsByApplicationQuery(applicationName, page, pageSize),
+            cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("applications/{applicationName}/environments/status")]
     public async Task<IActionResult> GetEnvironmentStatus(string applicationName, CancellationToken cancellationToken)
     {
-        try
-        {
-            var result = await _getEnvironmentStatusQueryHandler.HandleAsync(
-                new GetEnvironmentStatusQuery(applicationName),
-                cancellationToken);
-            return Ok(result);
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var result = await _dispatcher.SendQueryAsync<GetEnvironmentStatusQuery, EnvironmentStatusResult>(
+            new GetEnvironmentStatusQuery(applicationName),
+            cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _getByIdQueryHandler.HandleAsync(new GetPromotionByIdQuery(id), cancellationToken);
+        var result = await _dispatcher.SendQueryAsync<GetPromotionByIdQuery, PromotionDto?>(
+            new GetPromotionByIdQuery(id),
+            cancellationToken);
         return result is null
             ? NotFound(new { message = $"Promotion '{id}' not found." })
             : Ok(result);
@@ -111,118 +71,62 @@ public class PromotionController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> RequestPromotion([FromBody] RequestPromotionHttpRequest request, CancellationToken cancellationToken)
     {
-        try
-        {
-            var command = new RequestPromotionCommand(
-                request.ApplicationName,
-                request.Version,
-                request.SourceEnvironment,
-                request.TargetEnvironment,
-                (request.WorkItems ?? Array.Empty<RequestPromotionWorkItemHttpRequest>())
-                    .Select(item => new RequestPromotionWorkItemInput(item.ExternalId, item.Title))
-                    .ToArray());
+        var command = new RequestPromotionCommand(
+            request.ApplicationName,
+            request.Version,
+            request.SourceEnvironment,
+            request.TargetEnvironment,
+            (request.WorkItems ?? Array.Empty<RequestPromotionWorkItemHttpRequest>())
+                .Select(item => new RequestPromotionWorkItemInput(item.ExternalId, item.Title))
+                .ToArray());
 
-            var created = await _requestPromotionHandler.HandleAsync(command, cancellationToken);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var created = await _dispatcher.SendCommandAsync<RequestPromotionCommand, PromotionDto>(command, cancellationToken);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, [FromBody] ApprovePromotionHttpRequest request, CancellationToken cancellationToken)
     {
-        try
-        {
-            var updated = await _approvePromotionHandler.HandleAsync(
-                new ApprovePromotionCommand(id, request.RequestedByRole),
-                cancellationToken);
-            return Ok(updated);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updated = await _dispatcher.SendCommandAsync<ApprovePromotionCommand, PromotionDto>(
+            new ApprovePromotionCommand(id, request.RequestedByRole),
+            cancellationToken);
+        return Ok(updated);
     }
 
     [HttpPost("{id:guid}/start")]
     public async Task<IActionResult> Start(Guid id, CancellationToken cancellationToken)
     {
-        try
-        {
-            var updated = await _startDeploymentHandler.HandleAsync(new StartDeploymentCommand(id), cancellationToken);
-            return Ok(updated);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updated = await _dispatcher.SendCommandAsync<StartDeploymentCommand, PromotionDto>(
+            new StartDeploymentCommand(id),
+            cancellationToken);
+        return Ok(updated);
     }
 
     [HttpPost("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id, CancellationToken cancellationToken)
     {
-        try
-        {
-            var updated = await _completePromotionHandler.HandleAsync(new CompletePromotionCommand(id), cancellationToken);
-            return Ok(updated);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updated = await _dispatcher.SendCommandAsync<CompletePromotionCommand, PromotionDto>(
+            new CompletePromotionCommand(id),
+            cancellationToken);
+        return Ok(updated);
     }
 
     [HttpPost("{id:guid}/rollback")]
     public async Task<IActionResult> Rollback(Guid id, [FromBody] RollbackPromotionHttpRequest request, CancellationToken cancellationToken)
     {
-        try
-        {
-            var updated = await _rollbackPromotionHandler.HandleAsync(
-                new RollbackPromotionCommand(id, request.Reason),
-                cancellationToken);
-            return Ok(updated);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updated = await _dispatcher.SendCommandAsync<RollbackPromotionCommand, PromotionDto>(
+            new RollbackPromotionCommand(id, request.Reason),
+            cancellationToken);
+        return Ok(updated);
     }
 
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken cancellationToken)
     {
-        try
-        {
-            var updated = await _cancelPromotionHandler.HandleAsync(new CancelPromotionCommand(id), cancellationToken);
-            return Ok(updated);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (DomainRuleViolationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updated = await _dispatcher.SendCommandAsync<CancelPromotionCommand, PromotionDto>(
+            new CancelPromotionCommand(id),
+            cancellationToken);
+        return Ok(updated);
     }
 }
 

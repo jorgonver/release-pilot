@@ -4,6 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IRequestDispatcher, ReleasePilot.Api.Application.Dispatching.RequestDispatcher>();
 
 builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IPromotionRepository, ReleasePilot.Api.Infrastructure.Persistence.InMemoryPromotionRepository>();
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventDispatcher, ReleasePilot.Api.Infrastructure.Messaging.InMemoryDomainEventDispatcher>();
@@ -43,6 +44,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseMiddleware<ReleasePilot.Api.Middleware.ApiExceptionHandlingMiddleware>();
 
 app.MapControllers();
 
