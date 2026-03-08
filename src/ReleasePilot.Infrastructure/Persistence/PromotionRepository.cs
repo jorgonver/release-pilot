@@ -185,12 +185,21 @@ public sealed class PromotionRepository : IPromotionRepository
             row.SourceEnvironment,
             row.TargetEnvironment,
             ParseStatus(row.Status),
-            row.CreatedAt,
-            row.UpdatedAt,
+            ToUtcOffset(row.CreatedAt),
+            ToUtcOffset(row.UpdatedAt),
             row.RolledBackReason,
-            row.CompletedAt,
+            row.CompletedAt.HasValue ? ToUtcOffset(row.CompletedAt.Value) : null,
             workItems,
             stateHistory);
+    }
+
+    private static DateTimeOffset ToUtcOffset(DateTime value)
+    {
+        var utc = value.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            : value.ToUniversalTime();
+
+        return new DateTimeOffset(utc);
     }
 
     private static PromotionStatus ParseStatus(int value)
@@ -267,10 +276,10 @@ public sealed class PromotionRepository : IPromotionRepository
         string SourceEnvironment,
         string TargetEnvironment,
         int Status,
-        DateTimeOffset CreatedAt,
-        DateTimeOffset UpdatedAt,
+        DateTime CreatedAt,
+        DateTime UpdatedAt,
         string? RolledBackReason,
-        DateTimeOffset? CompletedAt,
+        DateTime? CompletedAt,
         string WorkItemsJson,
         string StateHistoryJson);
 
