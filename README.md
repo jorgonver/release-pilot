@@ -35,7 +35,20 @@ The solution now includes RabbitMQ + Postgres + API + Audit Worker via `docker-c
 
 ### Start Stack
 
-Audit schema setup is now an explicit prerequisite. Run it before starting the audit worker:
+Promotion schema setup is now an explicit prerequisite. Run it before starting the API:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/setup-promotion-db.sh
+```
+
+Optional override for a non-default database target:
+
+```bash
+PROMOTION_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-promotion-db.sh
+```
+
+Audit schema setup is also an explicit prerequisite. Run it before starting the audit worker:
 
 ```bash
 cd /home/jorge/projects/release-pilot
@@ -55,6 +68,8 @@ cd /home/jorge/projects/release-pilot
 docker compose up --build
 ```
 
+`docker-compose.yml` also includes a one-shot setup container (`promotions-db-setup`) that applies the promotions schema automatically for containerized runs.
+
 Services:
 
 - API: `http://localhost:5252`
@@ -73,6 +88,8 @@ Services:
 	- `occurred_at`
 	- `acting_user`
 - Worker fails fast at startup if `audit_log` does not exist.
+
+API promotion data is persisted in Postgres table `promotions`.
 
 Set acting user via the `actingUser` field in each command request payload.
 

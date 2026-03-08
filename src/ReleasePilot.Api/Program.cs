@@ -19,9 +19,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
+builder.Services
+    .AddOptions<PromotionRepositoryOptions>()
+    .Bind(builder.Configuration.GetSection(PromotionRepositoryOptions.SectionName))
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.ConnectionString),
+        $"{PromotionRepositoryOptions.SectionName}:ConnectionString must be configured.")
+    .ValidateOnStart();
 builder.Services.AddScoped<IRequestDispatcher, RequestDispatcher>();
 
-builder.Services.AddSingleton<IPromotionRepository, InMemoryPromotionRepository>();
+builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 builder.Services.AddSingleton<IDeploymentPort, NoOpDeploymentPort>();
 builder.Services.AddSingleton<IIssueTrackerPort, InMemoryIssueTrackerPort>();

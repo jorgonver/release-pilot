@@ -34,6 +34,34 @@ public sealed class Promotion : AggregateRoot
         AddDomainEvent(new PromotionRequestedDomainEvent(Id, ApplicationName, Version, SourceEnvironment, TargetEnvironment, actingUser));
     }
 
+    private Promotion(
+        Guid id,
+        string applicationName,
+        string version,
+        string sourceEnvironment,
+        string targetEnvironment,
+        PromotionStatus status,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        string? rolledBackReason,
+        DateTimeOffset? completedAt,
+        IReadOnlyCollection<WorkItemReference> workItems,
+        IReadOnlyCollection<PromotionStateHistoryEntry> stateHistory)
+    {
+        Id = id;
+        ApplicationName = applicationName;
+        Version = version;
+        SourceEnvironment = sourceEnvironment;
+        TargetEnvironment = targetEnvironment;
+        Status = status;
+        CreatedAt = createdAt;
+        UpdatedAt = updatedAt;
+        RolledBackReason = rolledBackReason;
+        CompletedAt = completedAt;
+        _workItems.AddRange(workItems);
+        _stateHistory.AddRange(stateHistory);
+    }
+
     public Guid Id { get; }
 
     public string ApplicationName { get; }
@@ -106,6 +134,40 @@ public sealed class Promotion : AggregateRoot
             EnvironmentPromotionPolicy.Normalize(targetEnvironment),
             normalizedActingUser,
             normalizedWorkItems);
+    }
+
+    public static Promotion Rehydrate(
+        Guid id,
+        string applicationName,
+        string version,
+        string sourceEnvironment,
+        string targetEnvironment,
+        PromotionStatus status,
+        DateTimeOffset createdAt,
+        DateTimeOffset updatedAt,
+        string? rolledBackReason,
+        DateTimeOffset? completedAt,
+        IReadOnlyCollection<WorkItemReference> workItems,
+        IReadOnlyCollection<PromotionStateHistoryEntry> stateHistory)
+    {
+        if (!Enum.IsDefined(status))
+        {
+            throw new DomainRuleViolationException("Invalid promotion status persisted in storage.");
+        }
+
+        return new Promotion(
+            id,
+            applicationName,
+            version,
+            sourceEnvironment,
+            targetEnvironment,
+            status,
+            createdAt,
+            updatedAt,
+            rolledBackReason,
+            completedAt,
+            workItems,
+            stateHistory);
     }
 
     public void Approve(string approverRole, string actingUser)

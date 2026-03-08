@@ -21,6 +21,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  promotions-db-setup:
+    image: postgres:16
+    container_name: releasepilot-promotions-db-setup
+    depends_on:
+      - postgres
+    environment:
+      PGPASSWORD: releasepilot
+    volumes:
+      - ./sql/api/001_create_promotions.sql:/docker-entrypoint-initdb.d/001_create_promotions.sql:ro
+    command: >
+      sh -c "until pg_isready -h postgres -p 5432 -U releasepilot; do sleep 1; done &&
+      psql -h postgres -U releasepilot -d releasepilot -v ON_ERROR_STOP=1 -f /docker-entrypoint-initdb.d/001_create_promotions.sql"
+
   api:
     build:
       context: ./src
@@ -29,6 +42,7 @@ services:
     depends_on:
       - rabbitmq
       - postgres
+      - promotions-db-setup
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -39,6 +53,7 @@ services:
       RabbitMq__VirtualHost: /
       RabbitMq__PromotionExchange: releasepilot.promotions
       RabbitMq__PromotionRoutingKeyPrefix: promotion
+      PromotionRepository__ConnectionString: Host=postgres;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot
     ports:
       - "5252:8080"
 

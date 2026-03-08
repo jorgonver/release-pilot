@@ -12,9 +12,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.12" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.12" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.12" />
+    <PackageReference Include="Npgsql" Version="8.0.6" />
     <PackageReference Include="RabbitMQ.Client" Version="7.1.2" />
   </ItemGroup>
 
