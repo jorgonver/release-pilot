@@ -1,81 +1,15 @@
-using ReleasePilot.Api.Application.Abstractions;
-using ReleasePilot.Api.Application.Dispatching;
-using ReleasePilot.Api.Application.Promotions;
-using ReleasePilot.Api.Application.Promotions.Commands;
-using ReleasePilot.Api.Application.Promotions.Events;
-using ReleasePilot.Api.Application.Promotions.Queries;
-using ReleasePilot.Api.Domain.Promotions.Events;
-using ReleasePilot.Api.Infrastructure.Messaging;
-using ReleasePilot.Api.Infrastructure.Persistence;
-using ReleasePilot.Api.Infrastructure.Ports;
-using ReleasePilot.Api.Middleware;
-using ReleasePilot.Api.Infrastructure.Events;
-using ReleasePilot.Api.Infrastructure;
+using ReleasePilot.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-builder.Services.AddControllers();
-builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services
-    .AddOptions<PromotionRepositoryOptions>()
-    .Bind(builder.Configuration.GetSection(PromotionRepositoryOptions.SectionName))
-    .Validate(
-        options => !string.IsNullOrWhiteSpace(options.ConnectionString),
-        $"{PromotionRepositoryOptions.SectionName}:ConnectionString must be configured.")
-    .ValidateOnStart();
-builder.Services.AddScoped<IRequestDispatcher, RequestDispatcher>();
-
-builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
-builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
-builder.Services.AddSingleton<IDeploymentPort, NoOpDeploymentPort>();
-builder.Services.AddSingleton<IIssueTrackerPort, InMemoryIssueTrackerPort>();
-builder.Services.AddSingleton<INotificationPort, InMemoryNotificationPort>();
-
-builder.Services.AddScoped<ICommandHandler<RequestPromotionCommand, PromotionDto>, RequestPromotionCommandHandler>();
-builder.Services.AddScoped<ICommandHandler<ApprovePromotionCommand, PromotionDto>, ApprovePromotionCommandHandler>();
-builder.Services.AddScoped<ICommandHandler<StartDeploymentCommand, PromotionDto>, StartDeploymentCommandHandler>();
-builder.Services.AddScoped<ICommandHandler<CompletePromotionCommand, PromotionDto>, CompletePromotionCommandHandler>();
-builder.Services.AddScoped<ICommandHandler<RollbackPromotionCommand, PromotionDto>, RollbackPromotionCommandHandler>();
-builder.Services.AddScoped<ICommandHandler<CancelPromotionCommand, PromotionDto>, CancelPromotionCommandHandler>();
-builder.Services.AddScoped<IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>>, ListPromotionsQueryHandler>();
-builder.Services.AddScoped<IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>>, ListApplicationsQueryHandler>();
-builder.Services.AddScoped<IQueryHandler<GetPromotionByIdQuery, PromotionDto?>, GetPromotionByIdQueryHandler>();
-builder.Services.AddScoped<IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult>, ListPromotionsByApplicationQueryHandler>();
-builder.Services.AddScoped<IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult>, GetEnvironmentStatusQueryHandler>();
-builder.Services.AddScoped<PromotionLifecycleLoggingEventHandler>();
-builder.Services.AddScoped<PromotionRabbitMqPublisherEventHandler>();
-builder.Services.AddScoped<PromotionTerminalStateNotificationHandler>();
-builder.Services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
-builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
+    .AddApiLayer()
+    .AddApplicationLayer()
+    .AddInfrastructureLayer(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-app.UseMiddleware<ApiExceptionHandlingMiddleware>();
-
-app.MapControllers();
+app.UseApiLayer();
 
 app.Run();
 

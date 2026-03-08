@@ -1,16 +1,7 @@
-using ReleasePilot.AuditWorker;
+using ReleasePilot.AuditWorker.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services
-	.AddOptions<AuditWorkerOptions>()
-	.Bind(builder.Configuration.GetSection(AuditWorkerOptions.SectionName))
-	.Validate(
-		options => !string.IsNullOrWhiteSpace(options.Postgres.ConnectionString),
-		$"{AuditWorkerOptions.SectionName}:Postgres:ConnectionString must be configured.")
-	.ValidateOnStart();
-builder.Services.AddSingleton<IAuditLogRepository, AuditLogRepository>();
-builder.Services.AddSingleton<IPromotionEventConsumer, RabbitMqPromotionEventConsumer>();
-builder.Services.AddHostedService<AuditLogConsumerWorker>();
+builder.Services.AddAuditWorkerLayer(builder.Configuration);
 
 var host = builder.Build();
 host.Run();
