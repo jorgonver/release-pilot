@@ -15,18 +15,18 @@ public sealed record RequestPromotionWorkItemInput(string ExternalId, string? Ti
 
 public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestPromotionCommand, PromotionDto>
 {
-    private readonly IPromotionRepository _repository;
+    private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
 
-    public RequestPromotionCommandHandler(IPromotionRepository repository, IDomainEventDispatcher eventDispatcher)
+    public RequestPromotionCommandHandler(IPromotionRepository promotionRepository, IDomainEventDispatcher eventDispatcher)
     {
-        _repository = repository;
+        _promotionRepository = promotionRepository;
         _eventDispatcher = eventDispatcher;
     }
 
     public async Task<PromotionDto> HandleAsync(RequestPromotionCommand command, CancellationToken cancellationToken)
     {
-        var existingPromotions = await _repository.ListAsync(cancellationToken);
+        var existingPromotions = await _promotionRepository.ListAsync(cancellationToken);
         PromotionDomainRules.EnsureCanRequest(
             command.ApplicationName,
             command.Version,
@@ -46,7 +46,7 @@ public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestProm
             command.ActingUser,
             workItems);
 
-        await _repository.AddAsync(promotion, cancellationToken);
+        await _promotionRepository.AddAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
         return promotion.ToDto();

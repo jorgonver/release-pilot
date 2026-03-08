@@ -7,26 +7,26 @@ public sealed record ApprovePromotionCommand(Guid PromotionId, string RequestedB
 
 public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApprovePromotionCommand, PromotionDto>
 {
-    private readonly IPromotionRepository _repository;
+    private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
 
-    public ApprovePromotionCommandHandler(IPromotionRepository repository, IDomainEventDispatcher eventDispatcher)
+    public ApprovePromotionCommandHandler(IPromotionRepository promotionRepository, IDomainEventDispatcher eventDispatcher)
     {
-        _repository = repository;
+        _promotionRepository = promotionRepository;
         _eventDispatcher = eventDispatcher;
     }
 
     public async Task<PromotionDto> HandleAsync(ApprovePromotionCommand command, CancellationToken cancellationToken)
     {
-        var promotion = await _repository.GetByIdAsync(command.PromotionId, cancellationToken)
+        var promotion = await _promotionRepository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
 
-        var existingPromotions = await _repository.ListAsync(cancellationToken);
+        var existingPromotions = await _promotionRepository.ListAsync(cancellationToken);
         PromotionDomainRules.EnsureEnvironmentNotLocked(promotion, existingPromotions);
 
         promotion.Approve(command.RequestedByRole, command.ActingUser);
 
-        await _repository.UpdateAsync(promotion, cancellationToken);
+        await _promotionRepository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
         return promotion.ToDto();

@@ -29,10 +29,11 @@ services:
     environment:
       PGPASSWORD: releasepilot
     volumes:
-      - ./sql/api/001_create_promotions.sql:/docker-entrypoint-initdb.d/001_create_promotions.sql:ro
+      - ./sql/api:/docker-entrypoint-initdb.d:ro
     command: >
       sh -c "until pg_isready -h postgres -p 5432 -U releasepilot; do sleep 1; done &&
-      psql -h postgres -U releasepilot -d releasepilot -v ON_ERROR_STOP=1 -f /docker-entrypoint-initdb.d/001_create_promotions.sql"
+      for f in /docker-entrypoint-initdb.d/*.sql; do
+      psql -h postgres -U releasepilot -d releasepilot -v ON_ERROR_STOP=1 -f \"$$f\"; done"
 
   api:
     build:
@@ -56,6 +57,29 @@ services:
       PromotionRepository__ConnectionString: Host=postgres;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot
     ports:
       - "5252:8080"
+
+  outbox-publisher:
+    build:
+      context: ./src
+      dockerfile: ReleasePilot.OutboxPublisher/Dockerfile
+    container_name: releasepilot-outbox-publisher
+    depends_on:
+      - rabbitmq
+      - postgres
+      - promotions-db-setup
+    environment:
+      PromotionRepository__ConnectionString: Host=postgres;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      RabbitMq__VirtualHost: /
+      RabbitMq__PromotionExchange: releasepilot.promotions
+      RabbitMq__PromotionRoutingKeyPrefix: promotion
+      OutboxPublisher__PollIntervalSeconds: 3
+      OutboxPublisher__BatchSize: 50
+      OutboxPublisher__RetryDelaySeconds: 10
+      OutboxPublisher__MaxRetryCount: 10
 
   audit-worker:
     build:

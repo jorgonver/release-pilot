@@ -31,7 +31,7 @@ Notes:
 
 ## Docker Event Pipeline
 
-The solution now includes RabbitMQ + Postgres + API + Audit Worker via `docker-compose.yml`.
+The solution now includes RabbitMQ + Postgres + API + Outbox Publisher Worker + Audit Worker via `docker-compose.yml`.
 
 ### Start Stack
 
@@ -47,6 +47,8 @@ Optional override for a non-default database target:
 ```bash
 PROMOTION_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-promotion-db.sh
 ```
+
+This setup applies all versioned scripts in `sql/api` (including promotions and outbox tables).
 
 Audit schema setup is also an explicit prerequisite. Run it before starting the audit worker:
 
@@ -73,6 +75,7 @@ docker compose up --build
 Services:
 
 - API: `http://localhost:5252`
+- Outbox Publisher Worker: background service that reads `outbox_messages` and publishes to RabbitMQ
 - RabbitMQ AMQP: `localhost:5672`
 - RabbitMQ Management UI: `http://localhost:15672` (user: `guest`, pass: `guest`)
 - Postgres: `localhost:5432` (db: `releasepilot`, user: `releasepilot`, pass: `releasepilot`)
@@ -80,7 +83,8 @@ Services:
 ### Event Publishing and Audit Log
 
 - Every promotion state transition emits a domain event.
-- API publishes each event to RabbitMQ exchange `releasepilot.promotions`.
+- API writes each integration event to Postgres `outbox_messages` in the same transaction as promotion state changes.
+- Dedicated `ReleasePilot.OutboxPublisher` worker reads pending outbox rows and publishes them to RabbitMQ exchange `releasepilot.promotions`.
 - Decoupled `ReleasePilot.AuditWorker` consumes from queue `releasepilot.audit`.
 - Worker persists audit entries into Postgres table `audit_log` with:
 	- `event_type`
@@ -90,6 +94,7 @@ Services:
 - Worker fails fast at startup if `audit_log` does not exist.
 
 API promotion data is persisted in Postgres table `promotions`.
+Outbox state is persisted in Postgres table `outbox_messages`.
 
 Set acting user via the `actingUser` field in each command request payload.
 

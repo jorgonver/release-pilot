@@ -6,23 +6,23 @@ public sealed record CancelPromotionCommand(Guid PromotionId, string ActingUser)
 
 public sealed class CancelPromotionCommandHandler : ICommandHandler<CancelPromotionCommand, PromotionDto>
 {
-    private readonly IPromotionRepository _repository;
+    private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
 
-    public CancelPromotionCommandHandler(IPromotionRepository repository, IDomainEventDispatcher eventDispatcher)
+    public CancelPromotionCommandHandler(IPromotionRepository promotionRepository, IDomainEventDispatcher eventDispatcher)
     {
-        _repository = repository;
+        _promotionRepository = promotionRepository;
         _eventDispatcher = eventDispatcher;
     }
 
     public async Task<PromotionDto> HandleAsync(CancelPromotionCommand command, CancellationToken cancellationToken)
     {
-        var promotion = await _repository.GetByIdAsync(command.PromotionId, cancellationToken)
+        var promotion = await _promotionRepository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
 
         promotion.Cancel(command.ActingUser);
 
-        await _repository.UpdateAsync(promotion, cancellationToken);
+        await _promotionRepository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
         return promotion.ToDto();

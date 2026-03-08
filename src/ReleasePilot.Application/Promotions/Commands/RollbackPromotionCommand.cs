@@ -6,23 +6,23 @@ public sealed record RollbackPromotionCommand(Guid PromotionId, string Reason, s
 
 public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPromotionCommand, PromotionDto>
 {
-    private readonly IPromotionRepository _repository;
+    private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
 
-    public RollbackPromotionCommandHandler(IPromotionRepository repository, IDomainEventDispatcher eventDispatcher)
+    public RollbackPromotionCommandHandler(IPromotionRepository promotionRepository, IDomainEventDispatcher eventDispatcher)
     {
-        _repository = repository;
+        _promotionRepository = promotionRepository;
         _eventDispatcher = eventDispatcher;
     }
 
     public async Task<PromotionDto> HandleAsync(RollbackPromotionCommand command, CancellationToken cancellationToken)
     {
-        var promotion = await _repository.GetByIdAsync(command.PromotionId, cancellationToken)
+        var promotion = await _promotionRepository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
 
         promotion.Rollback(command.Reason, command.ActingUser);
 
-        await _repository.UpdateAsync(promotion, cancellationToken);
+        await _promotionRepository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
         return promotion.ToDto();
