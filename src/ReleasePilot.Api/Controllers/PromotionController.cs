@@ -3,6 +3,7 @@ using ReleasePilot.Api.Application.Abstractions;
 using ReleasePilot.Api.Application.Promotions;
 using ReleasePilot.Api.Application.Promotions.Commands;
 using ReleasePilot.Api.Application.Promotions.Queries;
+using ReleasePilot.Api.Dto;
 
 namespace ReleasePilot.Api.Controllers;
 
@@ -69,7 +70,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> RequestPromotion([FromBody] RequestPromotionHttpRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> RequestPromotion([FromBody] RequestPromotionDto request, CancellationToken cancellationToken)
     {
         var command = new RequestPromotionCommand(
             request.ApplicationName,
@@ -77,7 +78,7 @@ public class PromotionController : ControllerBase
             request.SourceEnvironment,
             request.TargetEnvironment,
             request.ActingUser,
-            (request.WorkItems ?? Array.Empty<RequestPromotionWorkItemHttpRequest>())
+            (request.WorkItems ?? Array.Empty<RequestPromotionWorkItemDto>())
                 .Select(item => new RequestPromotionWorkItemInput(item.ExternalId, item.Title))
                 .ToArray());
 
@@ -86,7 +87,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/approve")]
-    public async Task<IActionResult> Approve(Guid id, [FromBody] ApprovePromotionHttpRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Approve(Guid id, [FromBody] ApprovePromotionDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<ApprovePromotionCommand, PromotionDto>(
             new ApprovePromotionCommand(id, request.RequestedByRole, request.ActingUser),
@@ -95,7 +96,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/start")]
-    public async Task<IActionResult> Start(Guid id, [FromBody] ActingUserHttpRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Start(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<StartDeploymentCommand, PromotionDto>(
             new StartDeploymentCommand(id, request.ActingUser),
@@ -104,7 +105,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/complete")]
-    public async Task<IActionResult> Complete(Guid id, [FromBody] ActingUserHttpRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Complete(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<CompletePromotionCommand, PromotionDto>(
             new CompletePromotionCommand(id, request.ActingUser),
@@ -113,7 +114,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/rollback")]
-    public async Task<IActionResult> Rollback(Guid id, [FromBody] RollbackPromotionHttpRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Rollback(Guid id, [FromBody] RollbackPromotionDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<RollbackPromotionCommand, PromotionDto>(
             new RollbackPromotionCommand(id, request.Reason, request.ActingUser),
@@ -122,7 +123,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/cancel")]
-    public async Task<IActionResult> Cancel(Guid id, [FromBody] ActingUserHttpRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Cancel(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<CancelPromotionCommand, PromotionDto>(
             new CancelPromotionCommand(id, request.ActingUser),
@@ -130,19 +131,3 @@ public class PromotionController : ControllerBase
         return Ok(updated);
     }
 }
-
-public sealed record RequestPromotionHttpRequest(
-    string ApplicationName,
-    string Version,
-    string SourceEnvironment,
-    string TargetEnvironment,
-    string ActingUser,
-    IReadOnlyCollection<RequestPromotionWorkItemHttpRequest> WorkItems);
-
-public sealed record RequestPromotionWorkItemHttpRequest(string ExternalId, string? Title);
-
-public sealed record ApprovePromotionHttpRequest(string RequestedByRole, string ActingUser);
-
-public sealed record RollbackPromotionHttpRequest(string Reason, string ActingUser);
-
-public sealed record ActingUserHttpRequest(string ActingUser);
