@@ -3,7 +3,13 @@ set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:5252}"
 APP_NAME="${APP_NAME:-smoke-app}"
+API_PROJECT_PATH="${API_PROJECT_PATH:-src/ReleasePilot.Api}"
 RANDOM_SUFFIX="$(date +%s)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+API_PID=""
+AUTO_STARTED_API=0
+API_LOG_FILE=""
 
 fail() {
   echo "[FAIL] $1" >&2
@@ -19,7 +25,7 @@ require_command() {
 }
 
 require_command curl
-require_command python3
+require_command jq
 
 LAST_BODY=""
 LAST_STATUS=""
@@ -50,20 +56,66 @@ assert_status() {
 }
 
 json_get() {
-  local expression="$1"
-  python3 -c "import json,sys; data=json.loads(sys.argv[1]); print(eval(sys.argv[2]))" "$LAST_BODY" "$expression"
+  local jq_filter="$1"
+  jq -er "$jq_filter" <<<"$LAST_BODY"
 }
 
 assert_json_condition() {
-  local condition="$1"
-  local ok
-  ok="$(python3 -c "import json,sys; data=json.loads(sys.argv[1]); print('true' if eval(sys.argv[2]) else 'false')" "$LAST_BODY" "$condition")"
-  [[ "$ok" == "true" ]] || fail "JSON assertion failed: $condition | Body: $LAST_BODY"
+  local jq_condition="$1"
+  jq -e "$jq_condition" <<<"$LAST_BODY" >/dev/null || fail "JSON assertion failed: $jq_condition | Body: $LAST_BODY"
+}
+
+is_api_available() {
+  curl -sS -o /dev/null --connect-timeout 1 --max-time 2 "$BASE_URL/api/promotions"
+}
+
+cleanup() {
+  if [[ "$AUTO_STARTED_API" -eq 1 && -n "$API_PID" ]]; then
+    log "Stopping API process started by smoke test (pid=$API_PID)"
+    kill "$API_PID" >/dev/null 2>&1 || true
+    wait "$API_PID" 2>/dev/null || true
+  fi
+
+  if [[ -n "$API_LOG_FILE" && -f "$API_LOG_FILE" ]]; then
+    rm -f "$API_LOG_FILE"
+  fi
+}
+
+trap cleanup EXIT
+
+ensure_api_running() {
+  if is_api_available; then
+    log "API is already running at $BASE_URL"
+    return
+  fi
+
+  require_command dotnet
+  API_LOG_FILE="$(mktemp)"
+
+  log "API not reachable; starting it from '$API_PROJECT_PATH'"
+  (
+    cd "$REPO_ROOT"
+    dotnet run --project "$API_PROJECT_PATH" --no-build >"$API_LOG_FILE" 2>&1
+  ) &
+
+  API_PID="$!"
+  AUTO_STARTED_API=1
+
+  for _ in $(seq 1 40); do
+    if is_api_available; then
+      log "API became available at $BASE_URL"
+      return
+    fi
+    sleep 1
+  done
+
+  echo "--- API startup logs ---" >&2
+  cat "$API_LOG_FILE" >&2 || true
+  fail "API did not become ready at $BASE_URL within timeout"
 }
 
 log "Checking API availability at $BASE_URL"
-request GET "/api/environments"
-assert_status 200
+ensure_api_running
 
 VERSION1="1.0.${RANDOM_SUFFIX}.1"
 VERSION2="1.0.${RANDOM_SUFFIX}.2"
@@ -81,27 +133,27 @@ request POST "/api/promotions" "{
   ]
 }"
 assert_status 201
-PROMO_COMPLETE_ID="$(json_get "data['id']")"
+PROMO_COMPLETE_ID="$(json_get '.id')"
 
 log "2) GetPromotionById"
 request GET "/api/promotions/$PROMO_COMPLETE_ID"
 assert_status 200
-assert_json_condition "data['id'] == '$PROMO_COMPLETE_ID'"
-assert_json_condition "len(data['stateHistory']) >= 1"
+assert_json_condition ".id == \"$PROMO_COMPLETE_ID\""
+assert_json_condition ".stateHistory | length >= 1"
 
 log "3) Approve -> Start -> Complete"
 request POST "/api/promotions/$PROMO_COMPLETE_ID/approve" "{ \"requestedByRole\": \"Approver\" }"
 assert_status 200
-assert_json_condition "data['status'] == 'Approved'"
+assert_json_condition '.status == "Approved"'
 
 request POST "/api/promotions/$PROMO_COMPLETE_ID/start"
 assert_status 200
-assert_json_condition "data['status'] == 'InProgress'"
+assert_json_condition '.status == "InProgress"'
 
 request POST "/api/promotions/$PROMO_COMPLETE_ID/complete"
 assert_status 200
-assert_json_condition "data['status'] == 'Completed'"
-assert_json_condition "data['completedAt'] is not None"
+assert_json_condition '.status == "Completed"'
+assert_json_condition '.completedAt != null'
 
 log "4) RequestPromotion (for rollback flow)"
 request POST "/api/promotions" "{
@@ -114,7 +166,7 @@ request POST "/api/promotions" "{
   ]
 }"
 assert_status 201
-PROMO_ROLLBACK_ID="$(json_get "data['id']")"
+PROMO_ROLLBACK_ID="$(json_get '.id')"
 
 request POST "/api/promotions/$PROMO_ROLLBACK_ID/approve" "{ \"requestedByRole\": \"Approver\" }"
 assert_status 200
@@ -122,8 +174,8 @@ request POST "/api/promotions/$PROMO_ROLLBACK_ID/start"
 assert_status 200
 request POST "/api/promotions/$PROMO_ROLLBACK_ID/rollback" "{ \"reason\": \"Smoke rollback validation\" }"
 assert_status 200
-assert_json_condition "data['status'] == 'RolledBack'"
-assert_json_condition "data['rolledBackReason'] == 'Smoke rollback validation'"
+assert_json_condition '.status == "RolledBack"'
+assert_json_condition '.rolledBackReason == "Smoke rollback validation"'
 
 log "5) RequestPromotion (for cancel flow)"
 request POST "/api/promotions" "{
@@ -134,31 +186,31 @@ request POST "/api/promotions" "{
   \"workItems\": []
 }"
 assert_status 201
-PROMO_CANCEL_ID="$(json_get "data['id']")"
+PROMO_CANCEL_ID="$(json_get '.id')"
 
 request POST "/api/promotions/$PROMO_CANCEL_ID/cancel"
 assert_status 200
-assert_json_condition "data['status'] == 'Cancelled'"
+assert_json_condition '.status == "Cancelled"'
 
 log "6) List endpoints"
 request GET "/api/promotions"
 assert_status 200
-assert_json_condition "isinstance(data, list)"
-assert_json_condition "any(item['id'] == '$PROMO_COMPLETE_ID' for item in data)"
+assert_json_condition 'type == "array"'
+assert_json_condition ".[] | select(.id == \"$PROMO_COMPLETE_ID\") | .id == \"$PROMO_COMPLETE_ID\""
 
 request GET "/api/promotions/applications"
 assert_status 200
-assert_json_condition "'$APP_NAME' in data"
+assert_json_condition ".[] | select(. == \"$APP_NAME\")"
 
 request GET "/api/promotions/applications/$APP_NAME?page=1&pageSize=20"
 assert_status 200
-assert_json_condition "data['totalCount'] >= 3"
-assert_json_condition "len(data['items']) >= 3"
+assert_json_condition '.totalCount >= 3'
+assert_json_condition '.items | length >= 3'
 
 request GET "/api/promotions/applications/$APP_NAME/environments/status"
 assert_status 200
-assert_json_condition "data['applicationName'] == '$APP_NAME'"
-assert_json_condition "len(data['environments']) == 3"
+assert_json_condition ".applicationName == \"$APP_NAME\""
+assert_json_condition '.environments | length == 3'
 
 log "Smoke test completed successfully."
 echo "[PASS] All endpoints validated for app '$APP_NAME'"
