@@ -7,21 +7,21 @@ Use this path if you want the fastest way to run the full stack after cloning.
 1. Start infrastructure and services:
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 docker compose up --build
 ```
 
 2. In a second terminal, apply audit schema:
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 ./scripts/setup-audit-db.sh
 ```
 
 3. In a third terminal, run the API smoke test:
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 ./scripts/api-smoke-test.sh
 ```
 
@@ -39,7 +39,7 @@ Prerequisites for this path:
 1. Apply DB schemas:
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 ./scripts/setup-promotion-db.sh
 ./scripts/setup-audit-db.sh
 ```
@@ -47,28 +47,28 @@ cd /home/jorge/projects/release-pilot
 2. Start API (terminal 1):
 
 ```bash
-cd /home/jorge/projects/release-pilot/src
+cd <repo-root>/src
 dotnet run --project ReleasePilot.Api
 ```
 
 3. Start Outbox Publisher (terminal 2):
 
 ```bash
-cd /home/jorge/projects/release-pilot/src
+cd <repo-root>/src
 dotnet run --project ReleasePilot.OutboxPublisher
 ```
 
 4. Start Audit Worker (terminal 3):
 
 ```bash
-cd /home/jorge/projects/release-pilot/src
+cd <repo-root>/src
 dotnet run --project ReleasePilot.AuditWorker
 ```
 
 5. Validate from another terminal:
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 ./scripts/api-smoke-test.sh
 ```
 
@@ -79,7 +79,7 @@ If the following checks pass, the setup is healthy:
 1. API smoke test returns `[PASS]`:
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 ./scripts/api-smoke-test.sh
 ```
 
@@ -94,6 +94,38 @@ docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "S
 ```bash
 docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT event_type, promotion_id, occurred_at, acting_user FROM audit_log ORDER BY id DESC LIMIT 20;"
 ```
+
+## Testing
+
+Run all unit tests:
+
+```bash
+cd <repo-root>
+dotnet test src/release-pilot.sln
+```
+
+Run only domain tests:
+
+```bash
+cd <repo-root>
+dotnet test src/ReleasePilot.Domain.Tests/ReleasePilot.Domain.Tests.csproj
+```
+
+Run only application tests:
+
+```bash
+cd <repo-root>
+dotnet test src/ReleasePilot.Application.Tests/ReleasePilot.Application.Tests.csproj
+```
+
+Collect code coverage (Cobertura):
+
+```bash
+cd <repo-root>
+dotnet test src/release-pilot.sln --collect:"XPlat Code Coverage"
+```
+
+Coverage files are written under each test project's `TestResults/` directory.
 
 ## Smoke Test Harness
 
@@ -116,7 +148,7 @@ sudo apt-get install -y jq
 ### Run Smoke Test
 
 ```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 ./scripts/api-smoke-test.sh
 ```
 
@@ -125,50 +157,91 @@ Notes:
 - The script auto-starts the API if it is not running and stops it after completion if it started it.
 - If `jq` is missing, the script attempts an automatic install when root or passwordless sudo is available.
 
+## Troubleshooting
+
+### `docker compose up --build` fails because ports are already in use
+
+Symptoms: errors about `5432`, `5672`, `15672`, or `5252` already bound.
+
+Fix:
+
+```bash
+docker ps
+docker stop <container_id>
+```
+
+Or stop the full stack in this repo and retry:
+
+```bash
+cd <repo-root>
+docker compose down
+docker compose up --build
+```
+
+### API or workers fail on DB schema errors
+
+Symptoms: table-not-found errors for `promotions`, `outbox_messages`, or `audit_log`.
+
+Fix:
+
+```bash
+cd <repo-root>
+./scripts/setup-promotion-db.sh
+./scripts/setup-audit-db.sh
+```
+
+Then rerun the failing process.
+
+### `setup-*.sh` scripts fail with `psql: command not found`
+
+Install PostgreSQL client tools:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y postgresql-client
+```
+
+### Smoke test fails with `jq: command not found`
+
+Install `jq`:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y jq
+```
+
+### Workers start but no audit rows appear
+
+Checks:
+
+- Confirm outbox rows are being processed (`processed_at` not null) using commands in `Verification Checklist`.
+- Confirm RabbitMQ is reachable at `localhost:5672`.
+- Confirm audit schema has been created (`./scripts/setup-audit-db.sh`).
+- Review worker logs:
+
+```bash
+cd <repo-root>
+docker compose logs -f outbox-publisher audit-worker
+```
+
 ## Docker Event Pipeline
 
 The solution now includes RabbitMQ + Postgres + API + Outbox Publisher Worker + Audit Worker via `docker-compose.yml`.
 
-### Start Stack
+### Start Stack (Docker)
 
-For local non-container runs, promotion schema setup is an explicit prerequisite. Run it before starting the API:
+For local non-container runs, follow `Quick Start (After Clone, Local No Docker)`.
 
-```bash
-cd /home/jorge/projects/release-pilot
-./scripts/setup-promotion-db.sh
-```
-
-Promotion DB: Optional override for a non-default database target:
+Start the Docker stack:
 
 ```bash
-PROMOTION_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-promotion-db.sh
-```
-
-This setup applies all versioned scripts in `sql/api` (including promotions and outbox tables).
-
-Audit schema setup is also an explicit prerequisite. Run it before starting the audit worker:
-
-```bash
-cd /home/jorge/projects/release-pilot
-./scripts/setup-audit-db.sh
-```
-
-Audit DB: Optional override for a non-default database target:
-
-```bash
-AUDIT_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-audit-db.sh
-```
-
-Then start the stack:
-
-```bash
-cd /home/jorge/projects/release-pilot
+cd <repo-root>
 docker compose up --build
 ```
 
 `docker-compose.yml` includes a one-shot setup container (`promotions-db-setup`) that applies API schema scripts (`sql/api/*.sql`) automatically for containerized runs.
 
-For containerized runs, audit schema still needs to be created with `scripts/setup-audit-db.sh` (or equivalent SQL execution) before/while starting `audit-worker`.
+For containerized runs, audit schema still needs to be created with `scripts/setup-audit-db.sh` (or equivalent SQL execution) before or while starting `audit-worker`.
 
 Services:
 
