@@ -4,7 +4,7 @@ namespace ReleasePilot.AuditWorker;
 
 public interface IAuditLogRepository
 {
-    Task EnsureSchemaAsync(CancellationToken cancellationToken);
+    Task EnsurePrerequisitesAsync(CancellationToken cancellationToken);
 
     Task InsertAsync(PromotionEventMessage message, CancellationToken cancellationToken);
 }

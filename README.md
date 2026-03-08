@@ -35,6 +35,21 @@ The solution now includes RabbitMQ + Postgres + API + Audit Worker via `docker-c
 
 ### Start Stack
 
+Audit schema setup is now an explicit prerequisite. Run it before starting the audit worker:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/setup-audit-db.sh
+```
+
+Optional override for a non-default database target:
+
+```bash
+AUDIT_DB_CONNECTION_STRING="Host=localhost;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot" ./scripts/setup-audit-db.sh
+```
+
+Then start the stack:
+
 ```bash
 cd /home/jorge/projects/release-pilot
 docker compose up --build
@@ -57,6 +72,7 @@ Services:
 	- `promotion_id`
 	- `occurred_at`
 	- `acting_user`
+- Worker fails fast at startup if `audit_log` does not exist.
 
 Set acting user via the `actingUser` field in each command request payload.
 

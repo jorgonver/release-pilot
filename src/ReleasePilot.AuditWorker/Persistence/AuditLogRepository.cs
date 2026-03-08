@@ -14,25 +14,27 @@ public sealed class AuditLogRepository : IAuditLogRepository
         _options = options.Value;
     }
 
-    public async Task EnsureSchemaAsync(CancellationToken cancellationToken)
+    public async Task EnsurePrerequisitesAsync(CancellationToken cancellationToken)
     {
         const string sql = """
-            CREATE TABLE IF NOT EXISTS audit_log (
-                id BIGSERIAL PRIMARY KEY,
-                event_id UUID NOT NULL UNIQUE,
-                event_type TEXT NOT NULL,
-                promotion_id UUID NOT NULL,
-                occurred_at TIMESTAMPTZ NOT NULL,
-                acting_user TEXT NOT NULL,
-                payload_json JSONB NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = 'audit_log'
             );
             """;
 
         await using var connection = CreateConnection();
         await connection.OpenAsync(cancellationToken);
         var command = new CommandDefinition(sql, cancellationToken: cancellationToken);
-        await connection.ExecuteAsync(command);
+        var exists = await connection.ExecuteScalarAsync<bool>(command);
+
+        if (!exists)
+        {
+            throw new InvalidOperationException(
+                "Missing required table 'audit_log'. Run scripts/setup-audit-db.sh before starting ReleasePilot.AuditWorker.");
+        }
     }
 
     public async Task InsertAsync(PromotionEventMessage message, CancellationToken cancellationToken)

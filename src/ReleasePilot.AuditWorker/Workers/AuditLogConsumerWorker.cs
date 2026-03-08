@@ -20,7 +20,7 @@ public sealed class AuditLogConsumerWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _auditLogRepository.EnsureSchemaAsync(stoppingToken);
+        await _auditLogRepository.EnsurePrerequisitesAsync(stoppingToken);
         await _promotionEventConsumer.StartAsync(HandleMessageAsync, stoppingToken);
         _logger.LogInformation("Audit worker started and is consuming promotion events.");
 
