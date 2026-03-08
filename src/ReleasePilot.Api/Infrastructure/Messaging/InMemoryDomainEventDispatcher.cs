@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using ReleasePilot.Api.Application.Abstractions;
 using ReleasePilot.Api.Domain.Primitives;
 
@@ -5,20 +6,22 @@ namespace ReleasePilot.Api.Infrastructure.Messaging;
 
 public sealed class InMemoryDomainEventDispatcher : IDomainEventDispatcher
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public InMemoryDomainEventDispatcher(IServiceProvider serviceProvider)
+    public InMemoryDomainEventDispatcher(IServiceScopeFactory scopeFactory)
     {
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task DispatchAsync(IReadOnlyCollection<IDomainEvent> domainEvents, CancellationToken cancellationToken)
     {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var scopedProvider = scope.ServiceProvider;
+
         foreach (var domainEvent in domainEvents)
         {
             var handlerType = typeof(IDomainEventHandler<>).MakeGenericType(domainEvent.GetType());
-            var enumerableType = typeof(IEnumerable<>).MakeGenericType(handlerType);
-            var handlers = (IEnumerable<object>)(_serviceProvider.GetService(enumerableType) ?? Array.Empty<object>());
+            var handlers = scopedProvider.GetServices(handlerType).Cast<object>().ToArray();
 
             var tasks = new List<Task>();
             foreach (var handler in handlers)

@@ -17,6 +17,8 @@ public class PromotionController : ControllerBase
     private readonly ICommandHandler<CompletePromotionCommand, PromotionDto> _completePromotionHandler;
     private readonly ICommandHandler<RollbackPromotionCommand, PromotionDto> _rollbackPromotionHandler;
     private readonly ICommandHandler<CancelPromotionCommand, PromotionDto> _cancelPromotionHandler;
+    private readonly IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>> _listPromotionsQueryHandler;
+    private readonly IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>> _listApplicationsQueryHandler;
     private readonly IQueryHandler<GetPromotionByIdQuery, PromotionDto?> _getByIdQueryHandler;
     private readonly IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult> _listByApplicationQueryHandler;
     private readonly IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult> _getEnvironmentStatusQueryHandler;
@@ -28,6 +30,8 @@ public class PromotionController : ControllerBase
         ICommandHandler<CompletePromotionCommand, PromotionDto> completePromotionHandler,
         ICommandHandler<RollbackPromotionCommand, PromotionDto> rollbackPromotionHandler,
         ICommandHandler<CancelPromotionCommand, PromotionDto> cancelPromotionHandler,
+        IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>> listPromotionsQueryHandler,
+        IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>> listApplicationsQueryHandler,
         IQueryHandler<GetPromotionByIdQuery, PromotionDto?> getByIdQueryHandler,
         IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult> listByApplicationQueryHandler,
         IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult> getEnvironmentStatusQueryHandler)
@@ -38,9 +42,25 @@ public class PromotionController : ControllerBase
         _completePromotionHandler = completePromotionHandler;
         _rollbackPromotionHandler = rollbackPromotionHandler;
         _cancelPromotionHandler = cancelPromotionHandler;
+        _listPromotionsQueryHandler = listPromotionsQueryHandler;
+        _listApplicationsQueryHandler = listApplicationsQueryHandler;
         _getByIdQueryHandler = getByIdQueryHandler;
         _listByApplicationQueryHandler = listByApplicationQueryHandler;
         _getEnvironmentStatusQueryHandler = getEnvironmentStatusQueryHandler;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ListPromotions(CancellationToken cancellationToken)
+    {
+        var result = await _listPromotionsQueryHandler.HandleAsync(new ListPromotionsQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("applications")]
+    public async Task<IActionResult> ListApplications(CancellationToken cancellationToken)
+    {
+        var result = await _listApplicationsQueryHandler.HandleAsync(new ListApplicationsQuery(), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("applications/{applicationName}")]

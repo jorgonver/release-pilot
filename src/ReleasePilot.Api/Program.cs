@@ -6,7 +6,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IPromotionRepository, ReleasePilot.Api.Infrastructure.Persistence.InMemoryPromotionRepository>();
-builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IDomainEventDispatcher, ReleasePilot.Api.Infrastructure.Messaging.InMemoryDomainEventDispatcher>();
+builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventDispatcher, ReleasePilot.Api.Infrastructure.Messaging.InMemoryDomainEventDispatcher>();
 builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IDeploymentPort, ReleasePilot.Api.Infrastructure.Ports.NoOpDeploymentPort>();
 builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IIssueTrackerPort, ReleasePilot.Api.Infrastructure.Ports.InMemoryIssueTrackerPort>();
 builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.INotificationPort, ReleasePilot.Api.Infrastructure.Ports.InMemoryNotificationPort>();
@@ -17,6 +17,8 @@ builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHan
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.CompletePromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.CompletePromotionCommandHandler>();
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.RollbackPromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.RollbackPromotionCommandHandler>();
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.CancelPromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.CancelPromotionCommandHandler>();
+builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsQuery, IReadOnlyCollection<ReleasePilot.Api.Application.Promotions.PromotionDto>>, ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsQueryHandler>();
+builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.ListApplicationsQuery, IReadOnlyCollection<string>>, ReleasePilot.Api.Application.Promotions.Queries.ListApplicationsQueryHandler>();
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.GetPromotionByIdQuery, ReleasePilot.Api.Application.Promotions.PromotionDto?>, ReleasePilot.Api.Application.Promotions.Queries.GetPromotionByIdQueryHandler>();
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsByApplicationQuery, ReleasePilot.Api.Application.Promotions.Queries.PaginatedPromotionsResult>, ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsByApplicationQueryHandler>();
 builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.GetEnvironmentStatusQuery, ReleasePilot.Api.Application.Promotions.Queries.EnvironmentStatusResult>, ReleasePilot.Api.Application.Promotions.Queries.GetEnvironmentStatusQueryHandler>();
