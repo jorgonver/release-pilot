@@ -27,6 +27,74 @@ cd /home/jorge/projects/release-pilot
 
 If the script ends with `[PASS]`, the project is running correctly.
 
+## Quick Start (After Clone, Local No Docker)
+
+Use this path if you want to run processes directly with `dotnet run`.
+
+Prerequisites for this path:
+
+- Local Postgres is running and reachable
+- Local RabbitMQ is running and reachable
+
+1. Apply DB schemas:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/setup-promotion-db.sh
+./scripts/setup-audit-db.sh
+```
+
+2. Start API (terminal 1):
+
+```bash
+cd /home/jorge/projects/release-pilot/src
+dotnet run --project ReleasePilot.Api
+```
+
+3. Start Outbox Publisher (terminal 2):
+
+```bash
+cd /home/jorge/projects/release-pilot/src
+dotnet run --project ReleasePilot.OutboxPublisher
+```
+
+4. Start Audit Worker (terminal 3):
+
+```bash
+cd /home/jorge/projects/release-pilot/src
+dotnet run --project ReleasePilot.AuditWorker
+```
+
+5. Validate from another terminal:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/api-smoke-test.sh
+```
+
+## Verification Checklist
+
+If the following checks pass, the setup is healthy:
+
+1. API smoke test returns `[PASS]`:
+
+```bash
+cd /home/jorge/projects/release-pilot
+./scripts/api-smoke-test.sh
+```
+
+2. Outbox is being processed (rows become `processed_at` not null):
+
+```bash
+docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT id, event_type, processed_at, attempt_count, last_error FROM outbox_messages ORDER BY created_at DESC LIMIT 20;"
+```
+
+3. Audit rows are being persisted:
+
+```bash
+docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT event_type, promotion_id, occurred_at, acting_user FROM audit_log ORDER BY id DESC LIMIT 20;"
+```
+
 ## Smoke Test Harness
 
 The repository includes an endpoint smoke test script at `scripts/api-smoke-test.sh`.
@@ -128,58 +196,5 @@ Outbox state is persisted in Postgres table `outbox_messages`.
 
 Set acting user via the `actingUser` field in each command request payload.
 
-### Verify Audit Records
-
-After invoking API transitions:
-
-```bash
-docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT event_type, promotion_id, occurred_at, acting_user FROM audit_log ORDER BY id DESC LIMIT 20;"
-```
-
-### Verify Outbox Processing
-
-Inspect pending/processed outbox rows:
-
-```bash
-docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT id, event_type, attempt_count, processed_at, next_attempt_at, last_error, created_at FROM outbox_messages ORDER BY created_at DESC LIMIT 20;"
-```
-
-Check only pending rows:
-
-```bash
-docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "SELECT id, event_type, attempt_count, next_attempt_at, last_error FROM outbox_messages WHERE processed_at IS NULL ORDER BY created_at ASC LIMIT 20;"
-```
-
-## Local Run (No Docker)
-
-Use separate terminals after starting local Postgres and RabbitMQ.
-
-1. Apply schemas:
-
-```bash
-cd /home/jorge/projects/release-pilot
-./scripts/setup-promotion-db.sh
-./scripts/setup-audit-db.sh
-```
-
-2. Start API:
-
-```bash
-cd /home/jorge/projects/release-pilot/src
-dotnet run --project ReleasePilot.Api
-```
-
-3. Start Outbox Publisher:
-
-```bash
-cd /home/jorge/projects/release-pilot/src
-dotnet run --project ReleasePilot.OutboxPublisher
-```
-
-4. Start Audit Worker:
-
-```bash
-cd /home/jorge/projects/release-pilot/src
-dotnet run --project ReleasePilot.AuditWorker
-```
+For runtime validation commands, see `Verification Checklist` above.
 
