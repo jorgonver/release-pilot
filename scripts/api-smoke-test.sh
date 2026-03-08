@@ -24,8 +24,36 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "Required command not found: $1"
 }
 
+ensure_jq() {
+  if command -v jq >/dev/null 2>&1; then
+    return
+  fi
+
+  log "'jq' not found. Attempting automatic installation..."
+
+  if ! command -v apt-get >/dev/null 2>&1; then
+    fail "jq is required and apt-get is not available. Install jq manually and retry."
+  fi
+
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    apt-get update >/dev/null 2>&1 || fail "Failed to run apt-get update for jq installation."
+    apt-get install -y jq >/dev/null 2>&1 || fail "Failed to install jq automatically."
+    log "jq installed successfully."
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+    sudo apt-get update >/dev/null 2>&1 || fail "Failed to run sudo apt-get update for jq installation."
+    sudo apt-get install -y jq >/dev/null 2>&1 || fail "Failed to install jq automatically with sudo."
+    log "jq installed successfully with sudo."
+    return
+  fi
+
+  fail "jq is required. Automatic install needs root or passwordless sudo. Run: sudo apt-get install -y jq"
+}
+
 require_command curl
-require_command jq
+ensure_jq
 
 LAST_BODY=""
 LAST_STATUS=""

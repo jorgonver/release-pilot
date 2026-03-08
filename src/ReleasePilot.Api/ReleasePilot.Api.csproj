@@ -14,4 +14,10 @@
     <Folder Include="Controllers/" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ReleasePilot.Application\ReleasePilot.Application.csproj" />
+    <ProjectReference Include="..\ReleasePilot.Infrastructure\ReleasePilot.Infrastructure.csproj" />
+    <ProjectReference Include="..\ReleasePilot.Domain\ReleasePilot.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
