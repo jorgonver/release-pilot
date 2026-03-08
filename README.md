@@ -134,6 +134,7 @@ The repository includes an endpoint smoke test script at `scripts/api-smoke-test
 ### Prerequisites
 
 - `.NET SDK 9`
+- `Docker` + `Docker Compose` (for Docker-first quick start)
 - `curl`
 - `jq` (for JSON assertions in the script)
 - `psql` (PostgreSQL client, required by DB setup scripts)
@@ -156,6 +157,95 @@ Notes:
 
 - The script auto-starts the API if it is not running and stops it after completion if it started it.
 - If `jq` is missing, the script attempts an automatic install when root or passwordless sudo is available.
+
+## API Command Examples
+
+Base URL used below:
+
+```bash
+BASE_URL=http://localhost:5252
+```
+
+1. Request promotion (`POST /api/promotions`):
+
+```bash
+curl -sS -X POST "$BASE_URL/api/promotions" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"applicationName": "checkout-service",
+		"version": "1.2.3",
+		"sourceEnvironment": "dev",
+		"targetEnvironment": "staging",
+		"actingUser": "requester-user",
+		"workItems": [
+			{
+				"externalId": "WI-123",
+				"title": "Fix checkout timeout"
+			}
+		]
+	}' | tee /tmp/request-promotion.json
+```
+
+Capture the created promotion id:
+
+```bash
+PROMOTION_ID=$(jq -r '.id' /tmp/request-promotion.json)
+echo "$PROMOTION_ID"
+```
+
+2. Approve promotion (`POST /api/promotions/{id}/approve`):
+
+```bash
+curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/approve" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"requestedByRole": "Approver",
+		"actingUser": "approver-user"
+	}'
+```
+
+3. Start deployment (`POST /api/promotions/{id}/start`):
+
+```bash
+curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/start" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"actingUser": "deployer-user"
+	}'
+```
+
+4. Complete promotion (`POST /api/promotions/{id}/complete`):
+
+```bash
+curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/complete" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"actingUser": "deployer-user"
+	}'
+```
+
+5. Rollback promotion (`POST /api/promotions/{id}/rollback`):
+
+```bash
+curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/rollback" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"reason": "Deployment verification failed",
+		"actingUser": "deployer-user"
+	}'
+```
+
+6. Cancel promotion (`POST /api/promotions/{id}/cancel`):
+
+```bash
+curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/cancel" \
+	-H "Content-Type: application/json" \
+	-d '{
+		"actingUser": "requester-user"
+	}'
+```
+
+Note: `complete` and `rollback` are alternative terminal actions after `start`; run one or the other in a single flow.
 
 ## Troubleshooting
 
