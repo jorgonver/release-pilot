@@ -3,7 +3,7 @@ using ReleasePilot.Api.Domain.Promotions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record StartDeploymentCommand(Guid PromotionId) : ICommand<PromotionDto>;
+public sealed record StartDeploymentCommand(Guid PromotionId, string ActingUser) : ICommand<PromotionDto>;
 
 public sealed class StartDeploymentCommandHandler : ICommandHandler<StartDeploymentCommand, PromotionDto>
 {
@@ -38,7 +38,7 @@ public sealed class StartDeploymentCommandHandler : ICommandHandler<StartDeploym
                 promotion.TargetEnvironment),
             cancellationToken);
 
-        promotion.Start();
+        promotion.Start(command.ActingUser);
 
         await _repository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);

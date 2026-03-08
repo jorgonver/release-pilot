@@ -7,7 +7,8 @@ public sealed record PromotionRequestedDomainEvent(
     string ApplicationName,
     string Version,
     string SourceEnvironment,
-    string TargetEnvironment) : IDomainEvent
+    string TargetEnvironment,
+    string ActingUser) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }

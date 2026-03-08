@@ -9,6 +9,8 @@ using ReleasePilot.Api.Infrastructure.Messaging;
 using ReleasePilot.Api.Infrastructure.Persistence;
 using ReleasePilot.Api.Infrastructure.Ports;
 using ReleasePilot.Api.Middleware;
+using ReleasePilot.Api.Infrastructure.Events;
+using ReleasePilot.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddScoped<IRequestDispatcher, RequestDispatcher>();
 
 builder.Services.AddSingleton<IPromotionRepository, InMemoryPromotionRepository>();
@@ -36,13 +39,20 @@ builder.Services.AddScoped<IQueryHandler<GetPromotionByIdQuery, PromotionDto?>, 
 builder.Services.AddScoped<IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult>, ListPromotionsByApplicationQueryHandler>();
 builder.Services.AddScoped<IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult>, GetEnvironmentStatusQueryHandler>();
 builder.Services.AddScoped<PromotionLifecycleLoggingEventHandler>();
+builder.Services.AddScoped<PromotionRabbitMqPublisherEventHandler>();
 builder.Services.AddScoped<PromotionTerminalStateNotificationHandler>();
 builder.Services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
 builder.Services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionRabbitMqPublisherEventHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
 builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());

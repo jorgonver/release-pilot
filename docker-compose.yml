@@ -1,0 +1,65 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: releasepilot-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  postgres:
+    image: postgres:16
+    container_name: releasepilot-postgres
+    environment:
+      POSTGRES_USER: releasepilot
+      POSTGRES_PASSWORD: releasepilot
+      POSTGRES_DB: releasepilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./src
+      dockerfile: ReleasePilot.Api/Dockerfile
+    container_name: releasepilot-api
+    depends_on:
+      - rabbitmq
+      - postgres
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      RabbitMq__VirtualHost: /
+      RabbitMq__PromotionExchange: releasepilot.promotions
+      RabbitMq__PromotionRoutingKeyPrefix: promotion
+    ports:
+      - "5252:8080"
+
+  audit-worker:
+    build:
+      context: ./src
+      dockerfile: ReleasePilot.AuditWorker/Dockerfile
+    container_name: releasepilot-audit-worker
+    depends_on:
+      - rabbitmq
+      - postgres
+    environment:
+      AuditWorker__Postgres__ConnectionString: Host=postgres;Port=5432;Database=releasepilot;Username=releasepilot;Password=releasepilot
+      AuditWorker__RabbitMq__HostName: rabbitmq
+      AuditWorker__RabbitMq__Port: 5672
+      AuditWorker__RabbitMq__UserName: guest
+      AuditWorker__RabbitMq__Password: guest
+      AuditWorker__RabbitMq__VirtualHost: /
+      AuditWorker__RabbitMq__PromotionExchange: releasepilot.promotions
+      AuditWorker__RabbitMq__AuditQueueName: releasepilot.audit
+      AuditWorker__RabbitMq__AuditBindingKey: promotion.#
+
+volumes:
+  postgres_data:

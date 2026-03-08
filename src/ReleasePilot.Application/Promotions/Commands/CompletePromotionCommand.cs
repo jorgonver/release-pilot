@@ -2,7 +2,7 @@ using ReleasePilot.Api.Application.Abstractions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record CompletePromotionCommand(Guid PromotionId) : ICommand<PromotionDto>;
+public sealed record CompletePromotionCommand(Guid PromotionId, string ActingUser) : ICommand<PromotionDto>;
 
 public sealed class CompletePromotionCommandHandler : ICommandHandler<CompletePromotionCommand, PromotionDto>
 {
@@ -20,7 +20,7 @@ public sealed class CompletePromotionCommandHandler : ICommandHandler<CompletePr
         var promotion = await _repository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
 
-        promotion.Complete();
+        promotion.Complete(command.ActingUser);
 
         await _repository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);

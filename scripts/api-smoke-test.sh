@@ -155,6 +155,7 @@ request POST "/api/promotions" "{
   \"version\": \"$VERSION1\",
   \"sourceEnvironment\": \"dev\",
   \"targetEnvironment\": \"staging\",
+  \"actingUser\": \"smoke.tester\",
   \"workItems\": [
     { \"externalId\": \"SMOKE-101\", \"title\": \"Smoke story\" },
     { \"externalId\": \"SMOKE-102\", \"title\": \"Smoke bug\" }
@@ -170,15 +171,15 @@ assert_json_condition ".id == \"$PROMO_COMPLETE_ID\""
 assert_json_condition ".stateHistory | length >= 1"
 
 log "3) Approve -> Start -> Complete"
-request POST "/api/promotions/$PROMO_COMPLETE_ID/approve" "{ \"requestedByRole\": \"Approver\" }"
+request POST "/api/promotions/$PROMO_COMPLETE_ID/approve" "{ \"requestedByRole\": \"Approver\", \"actingUser\": \"smoke.approver\" }"
 assert_status 200
 assert_json_condition '.status == "Approved"'
 
-request POST "/api/promotions/$PROMO_COMPLETE_ID/start"
+request POST "/api/promotions/$PROMO_COMPLETE_ID/start" "{ \"actingUser\": \"smoke.deployer\" }"
 assert_status 200
 assert_json_condition '.status == "InProgress"'
 
-request POST "/api/promotions/$PROMO_COMPLETE_ID/complete"
+request POST "/api/promotions/$PROMO_COMPLETE_ID/complete" "{ \"actingUser\": \"smoke.deployer\" }"
 assert_status 200
 assert_json_condition '.status == "Completed"'
 assert_json_condition '.completedAt != null'
@@ -189,6 +190,7 @@ request POST "/api/promotions" "{
   \"version\": \"$VERSION2\",
   \"sourceEnvironment\": \"dev\",
   \"targetEnvironment\": \"staging\",
+  \"actingUser\": \"smoke.tester\",
   \"workItems\": [
     { \"externalId\": \"SMOKE-201\", \"title\": \"Rollback story\" }
   ]
@@ -196,11 +198,11 @@ request POST "/api/promotions" "{
 assert_status 201
 PROMO_ROLLBACK_ID="$(json_get '.id')"
 
-request POST "/api/promotions/$PROMO_ROLLBACK_ID/approve" "{ \"requestedByRole\": \"Approver\" }"
+request POST "/api/promotions/$PROMO_ROLLBACK_ID/approve" "{ \"requestedByRole\": \"Approver\", \"actingUser\": \"smoke.approver\" }"
 assert_status 200
-request POST "/api/promotions/$PROMO_ROLLBACK_ID/start"
+request POST "/api/promotions/$PROMO_ROLLBACK_ID/start" "{ \"actingUser\": \"smoke.deployer\" }"
 assert_status 200
-request POST "/api/promotions/$PROMO_ROLLBACK_ID/rollback" "{ \"reason\": \"Smoke rollback validation\" }"
+request POST "/api/promotions/$PROMO_ROLLBACK_ID/rollback" "{ \"reason\": \"Smoke rollback validation\", \"actingUser\": \"smoke.operator\" }"
 assert_status 200
 assert_json_condition '.status == "RolledBack"'
 assert_json_condition '.rolledBackReason == "Smoke rollback validation"'
@@ -211,12 +213,13 @@ request POST "/api/promotions" "{
   \"version\": \"$VERSION3\",
   \"sourceEnvironment\": \"dev\",
   \"targetEnvironment\": \"staging\",
+  \"actingUser\": \"smoke.tester\",
   \"workItems\": []
 }"
 assert_status 201
 PROMO_CANCEL_ID="$(json_get '.id')"
 
-request POST "/api/promotions/$PROMO_CANCEL_ID/cancel"
+request POST "/api/promotions/$PROMO_CANCEL_ID/cancel" "{ \"actingUser\": \"smoke.operator\" }"
 assert_status 200
 assert_json_condition '.status == "Cancelled"'
 

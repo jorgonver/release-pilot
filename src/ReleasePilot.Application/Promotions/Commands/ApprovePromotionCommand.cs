@@ -3,7 +3,7 @@ using ReleasePilot.Api.Domain.Promotions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record ApprovePromotionCommand(Guid PromotionId, string RequestedByRole) : ICommand<PromotionDto>;
+public sealed record ApprovePromotionCommand(Guid PromotionId, string RequestedByRole, string ActingUser) : ICommand<PromotionDto>;
 
 public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApprovePromotionCommand, PromotionDto>
 {
@@ -24,7 +24,7 @@ public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApproveProm
         var existingPromotions = await _repository.ListAsync(cancellationToken);
         PromotionDomainRules.EnsureEnvironmentNotLocked(promotion, existingPromotions);
 
-        promotion.Approve(command.RequestedByRole);
+        promotion.Approve(command.RequestedByRole, command.ActingUser);
 
         await _repository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);

@@ -8,6 +8,7 @@ public sealed record RequestPromotionCommand(
     string Version,
     string SourceEnvironment,
     string TargetEnvironment,
+    string ActingUser,
     IReadOnlyCollection<RequestPromotionWorkItemInput> WorkItems) : ICommand<PromotionDto>;
 
 public sealed record RequestPromotionWorkItemInput(string ExternalId, string? Title);
@@ -42,6 +43,7 @@ public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestProm
             command.Version,
             command.SourceEnvironment,
             command.TargetEnvironment,
+            command.ActingUser,
             workItems);
 
         await _repository.AddAsync(promotion, cancellationToken);

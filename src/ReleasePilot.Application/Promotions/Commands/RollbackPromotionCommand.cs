@@ -2,7 +2,7 @@ using ReleasePilot.Api.Application.Abstractions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record RollbackPromotionCommand(Guid PromotionId, string Reason) : ICommand<PromotionDto>;
+public sealed record RollbackPromotionCommand(Guid PromotionId, string Reason, string ActingUser) : ICommand<PromotionDto>;
 
 public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPromotionCommand, PromotionDto>
 {
@@ -20,7 +20,7 @@ public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPr
         var promotion = await _repository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
 
-        promotion.Rollback(command.Reason);
+        promotion.Rollback(command.Reason, command.ActingUser);
 
         await _repository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);

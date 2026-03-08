@@ -14,6 +14,7 @@ public sealed class Promotion : AggregateRoot
         string version,
         string sourceEnvironment,
         string targetEnvironment,
+        string actingUser,
         IReadOnlyCollection<WorkItemReference> workItems)
     {
         Id = id;
@@ -30,7 +31,7 @@ public sealed class Promotion : AggregateRoot
 
         _stateHistory.Add(new PromotionStateHistoryEntry(null, PromotionStatus.Requested, "RequestPromotion", CreatedAt));
 
-        AddDomainEvent(new PromotionRequestedDomainEvent(Id, ApplicationName, Version, SourceEnvironment, TargetEnvironment));
+        AddDomainEvent(new PromotionRequestedDomainEvent(Id, ApplicationName, Version, SourceEnvironment, TargetEnvironment, actingUser));
     }
 
     public Guid Id { get; }
@@ -62,6 +63,7 @@ public sealed class Promotion : AggregateRoot
         string version,
         string sourceEnvironment,
         string targetEnvironment,
+        string actingUser,
         IReadOnlyCollection<WorkItemReference>? workItems = null)
     {
         if (string.IsNullOrWhiteSpace(applicationName))
@@ -93,6 +95,7 @@ public sealed class Promotion : AggregateRoot
         EnvironmentPromotionPolicy.EnsureKnown(targetEnvironment, nameof(targetEnvironment));
         EnvironmentPromotionPolicy.EnsureAdjacentPromotionPath(sourceEnvironment, targetEnvironment);
 
+        var normalizedActingUser = NormalizeActingUser(actingUser);
         var normalizedWorkItems = workItems ?? Array.Empty<WorkItemReference>();
 
         return new Promotion(
@@ -101,10 +104,11 @@ public sealed class Promotion : AggregateRoot
             version.Trim(),
             EnvironmentPromotionPolicy.Normalize(sourceEnvironment),
             EnvironmentPromotionPolicy.Normalize(targetEnvironment),
+            normalizedActingUser,
             normalizedWorkItems);
     }
 
-    public void Approve(string approverRole)
+    public void Approve(string approverRole, string actingUser)
     {
         EnsureState(PromotionStatus.Requested, "Only requested promotions can be approved.");
         if (!string.Equals(approverRole?.Trim(), "Approver", StringComparison.OrdinalIgnoreCase))
@@ -112,35 +116,38 @@ public sealed class Promotion : AggregateRoot
             throw new DomainRuleViolationException("Only users with Approver role may approve a promotion.");
         }
 
+        var normalizedActingUser = NormalizeActingUser(actingUser);
         var previousState = Status;
         Status = PromotionStatus.Approved;
         UpdatedAt = DateTimeOffset.UtcNow;
         _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "ApprovePromotion", UpdatedAt));
-        AddDomainEvent(new PromotionApprovedDomainEvent(Id));
+        AddDomainEvent(new PromotionApprovedDomainEvent(Id, normalizedActingUser));
     }
 
-    public void Start()
+    public void Start(string actingUser)
     {
         EnsureState(PromotionStatus.Approved, "Only approved promotions can be started.");
+        var normalizedActingUser = NormalizeActingUser(actingUser);
         var previousState = Status;
         Status = PromotionStatus.InProgress;
         UpdatedAt = DateTimeOffset.UtcNow;
         _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "StartDeployment", UpdatedAt));
-        AddDomainEvent(new DeploymentStartedDomainEvent(Id));
+        AddDomainEvent(new DeploymentStartedDomainEvent(Id, normalizedActingUser));
     }
 
-    public void Complete()
+    public void Complete(string actingUser)
     {
         EnsureState(PromotionStatus.InProgress, "Only in-progress promotions can be completed.");
+        var normalizedActingUser = NormalizeActingUser(actingUser);
         var previousState = Status;
         Status = PromotionStatus.Completed;
         UpdatedAt = DateTimeOffset.UtcNow;
         CompletedAt = UpdatedAt;
         _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "CompletePromotion", UpdatedAt));
-        AddDomainEvent(new PromotionCompletedDomainEvent(Id));
+        AddDomainEvent(new PromotionCompletedDomainEvent(Id, normalizedActingUser));
     }
 
-    public void Rollback(string reason)
+    public void Rollback(string reason, string actingUser)
     {
         EnsureState(PromotionStatus.InProgress, "Only in-progress promotions can be rolled back.");
         if (string.IsNullOrWhiteSpace(reason))
@@ -148,22 +155,24 @@ public sealed class Promotion : AggregateRoot
             throw new DomainRuleViolationException("Rollback reason is required.");
         }
 
+        var normalizedActingUser = NormalizeActingUser(actingUser);
         var previousState = Status;
         RolledBackReason = reason.Trim();
         Status = PromotionStatus.RolledBack;
         UpdatedAt = DateTimeOffset.UtcNow;
         _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "RollbackPromotion", UpdatedAt, RolledBackReason));
-        AddDomainEvent(new PromotionRolledBackDomainEvent(Id, RolledBackReason));
+        AddDomainEvent(new PromotionRolledBackDomainEvent(Id, RolledBackReason, normalizedActingUser));
     }
 
-    public void Cancel()
+    public void Cancel(string actingUser)
     {
         EnsureState(PromotionStatus.Requested, "Only requested promotions can be cancelled.");
+        var normalizedActingUser = NormalizeActingUser(actingUser);
         var previousState = Status;
         Status = PromotionStatus.Cancelled;
         UpdatedAt = DateTimeOffset.UtcNow;
         _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "CancelPromotion", UpdatedAt));
-        AddDomainEvent(new PromotionCancelledDomainEvent(Id));
+        AddDomainEvent(new PromotionCancelledDomainEvent(Id, normalizedActingUser));
     }
 
     private void EnsureState(PromotionStatus expected, string message)
@@ -172,5 +181,15 @@ public sealed class Promotion : AggregateRoot
         {
             throw new DomainRuleViolationException(message);
         }
+    }
+
+    private static string NormalizeActingUser(string actingUser)
+    {
+        if (string.IsNullOrWhiteSpace(actingUser))
+        {
+            throw new DomainRuleViolationException("Acting user is required.");
+        }
+
+        return actingUser.Trim();
     }
 }
