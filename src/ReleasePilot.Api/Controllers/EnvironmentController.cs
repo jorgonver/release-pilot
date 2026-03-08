@@ -1,17 +1,34 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ReleasePilot.Api.Controllers
+namespace ReleasePilot.Api.Controllers;
+
+[Route("api/environments")]
+[ApiController]
+public class EnvironmentController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class EnvironmentController : ControllerBase
+    [HttpGet]
+    public IActionResult GetAll()
     {
-        [HttpGet]
-        [Route("{id}")]
-        public IActionResult GetById(int id)
+        // Baseline environments until environment management rules are specified.
+        var environments = new[] { "dev", "staging", "production" };
+        return Ok(environments);
+    }
+
+    [HttpGet("{name}")]
+    public IActionResult GetByName(string name)
+    {
+        var normalized = name.Trim().ToLowerInvariant();
+        if (normalized == "development")
         {
-            return Ok($"EnvironmentController is working! ID: {id}");
+            normalized = "dev";
         }
+
+        var known = new HashSet<string> { "dev", "staging", "production" };
+        if (!known.Contains(normalized))
+        {
+            return NotFound(new { message = $"Environment '{name}' not found." });
+        }
+
+        return Ok(new { name = normalized });
     }
 }

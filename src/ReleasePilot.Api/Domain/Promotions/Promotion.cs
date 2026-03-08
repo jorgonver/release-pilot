@@ -1,0 +1,176 @@
+using ReleasePilot.Api.Domain.Primitives;
+using ReleasePilot.Api.Domain.Promotions.Events;
+
+namespace ReleasePilot.Api.Domain.Promotions;
+
+public sealed class Promotion : AggregateRoot
+{
+    private readonly List<WorkItemReference> _workItems = new();
+    private readonly List<PromotionStateHistoryEntry> _stateHistory = new();
+
+    private Promotion(
+        Guid id,
+        string applicationName,
+        string version,
+        string sourceEnvironment,
+        string targetEnvironment,
+        IReadOnlyCollection<WorkItemReference> workItems)
+    {
+        Id = id;
+        ApplicationName = applicationName;
+        Version = version;
+        SourceEnvironment = sourceEnvironment;
+        TargetEnvironment = targetEnvironment;
+        _workItems.AddRange(workItems);
+        Status = PromotionStatus.Requested;
+        CreatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = CreatedAt;
+        RolledBackReason = null;
+        CompletedAt = null;
+
+        _stateHistory.Add(new PromotionStateHistoryEntry(null, PromotionStatus.Requested, "RequestPromotion", CreatedAt));
+
+        AddDomainEvent(new PromotionRequestedDomainEvent(Id, ApplicationName, Version, SourceEnvironment, TargetEnvironment));
+    }
+
+    public Guid Id { get; }
+
+    public string ApplicationName { get; }
+
+    public string Version { get; }
+
+    public string SourceEnvironment { get; }
+
+    public string TargetEnvironment { get; }
+
+    public PromotionStatus Status { get; private set; }
+
+    public DateTimeOffset CreatedAt { get; }
+
+    public DateTimeOffset UpdatedAt { get; private set; }
+
+    public string? RolledBackReason { get; private set; }
+
+    public DateTimeOffset? CompletedAt { get; private set; }
+
+    public IReadOnlyCollection<WorkItemReference> WorkItems => _workItems.AsReadOnly();
+
+    public IReadOnlyCollection<PromotionStateHistoryEntry> StateHistory => _stateHistory.AsReadOnly();
+
+    public static Promotion Create(
+        string applicationName,
+        string version,
+        string sourceEnvironment,
+        string targetEnvironment,
+        IReadOnlyCollection<WorkItemReference>? workItems = null)
+    {
+        if (string.IsNullOrWhiteSpace(applicationName))
+        {
+            throw new DomainRuleViolationException("Application name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            throw new DomainRuleViolationException("Version is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(sourceEnvironment))
+        {
+            throw new DomainRuleViolationException("Source environment is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(targetEnvironment))
+        {
+            throw new DomainRuleViolationException("Target environment is required.");
+        }
+
+        if (sourceEnvironment.Trim().Equals(targetEnvironment.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainRuleViolationException("Source and target environment must be different.");
+        }
+
+        EnvironmentPromotionPolicy.EnsureKnown(sourceEnvironment, nameof(sourceEnvironment));
+        EnvironmentPromotionPolicy.EnsureKnown(targetEnvironment, nameof(targetEnvironment));
+        EnvironmentPromotionPolicy.EnsureAdjacentPromotionPath(sourceEnvironment, targetEnvironment);
+
+        var normalizedWorkItems = workItems ?? Array.Empty<WorkItemReference>();
+
+        return new Promotion(
+            Guid.NewGuid(),
+            applicationName.Trim(),
+            version.Trim(),
+            EnvironmentPromotionPolicy.Normalize(sourceEnvironment),
+            EnvironmentPromotionPolicy.Normalize(targetEnvironment),
+            normalizedWorkItems);
+    }
+
+    public void Approve(string approverRole)
+    {
+        EnsureState(PromotionStatus.Requested, "Only requested promotions can be approved.");
+        if (!string.Equals(approverRole?.Trim(), "Approver", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainRuleViolationException("Only users with Approver role may approve a promotion.");
+        }
+
+        var previousState = Status;
+        Status = PromotionStatus.Approved;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "ApprovePromotion", UpdatedAt));
+        AddDomainEvent(new PromotionApprovedDomainEvent(Id));
+    }
+
+    public void Start()
+    {
+        EnsureState(PromotionStatus.Approved, "Only approved promotions can be started.");
+        var previousState = Status;
+        Status = PromotionStatus.InProgress;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "StartDeployment", UpdatedAt));
+        AddDomainEvent(new DeploymentStartedDomainEvent(Id));
+    }
+
+    public void Complete()
+    {
+        EnsureState(PromotionStatus.InProgress, "Only in-progress promotions can be completed.");
+        var previousState = Status;
+        Status = PromotionStatus.Completed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        CompletedAt = UpdatedAt;
+        _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "CompletePromotion", UpdatedAt));
+        AddDomainEvent(new PromotionCompletedDomainEvent(Id));
+    }
+
+    public void Rollback(string reason)
+    {
+        EnsureState(PromotionStatus.InProgress, "Only in-progress promotions can be rolled back.");
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new DomainRuleViolationException("Rollback reason is required.");
+        }
+
+        var previousState = Status;
+        RolledBackReason = reason.Trim();
+        Status = PromotionStatus.RolledBack;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "RollbackPromotion", UpdatedAt, RolledBackReason));
+        AddDomainEvent(new PromotionRolledBackDomainEvent(Id, RolledBackReason));
+    }
+
+    public void Cancel()
+    {
+        EnsureState(PromotionStatus.Requested, "Only requested promotions can be cancelled.");
+        var previousState = Status;
+        Status = PromotionStatus.Cancelled;
+        UpdatedAt = DateTimeOffset.UtcNow;
+        _stateHistory.Add(new PromotionStateHistoryEntry(previousState, Status, "CancelPromotion", UpdatedAt));
+        AddDomainEvent(new PromotionCancelledDomainEvent(Id));
+    }
+
+    private void EnsureState(PromotionStatus expected, string message)
+    {
+        if (Status != expected)
+        {
+            throw new DomainRuleViolationException(message);
+        }
+    }
+}
