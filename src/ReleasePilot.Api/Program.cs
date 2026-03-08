@@ -1,39 +1,51 @@
+using ReleasePilot.Api.Application.Abstractions;
+using ReleasePilot.Api.Application.Dispatching;
+using ReleasePilot.Api.Application.Promotions;
+using ReleasePilot.Api.Application.Promotions.Commands;
+using ReleasePilot.Api.Application.Promotions.Events;
+using ReleasePilot.Api.Application.Promotions.Queries;
+using ReleasePilot.Api.Domain.Promotions.Events;
+using ReleasePilot.Api.Infrastructure.Messaging;
+using ReleasePilot.Api.Infrastructure.Persistence;
+using ReleasePilot.Api.Infrastructure.Ports;
+using ReleasePilot.Api.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IRequestDispatcher, ReleasePilot.Api.Application.Dispatching.RequestDispatcher>();
+builder.Services.AddScoped<IRequestDispatcher, RequestDispatcher>();
 
-builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IPromotionRepository, ReleasePilot.Api.Infrastructure.Persistence.InMemoryPromotionRepository>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventDispatcher, ReleasePilot.Api.Infrastructure.Messaging.InMemoryDomainEventDispatcher>();
-builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IDeploymentPort, ReleasePilot.Api.Infrastructure.Ports.NoOpDeploymentPort>();
-builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.IIssueTrackerPort, ReleasePilot.Api.Infrastructure.Ports.InMemoryIssueTrackerPort>();
-builder.Services.AddSingleton<ReleasePilot.Api.Application.Abstractions.INotificationPort, ReleasePilot.Api.Infrastructure.Ports.InMemoryNotificationPort>();
+builder.Services.AddSingleton<IPromotionRepository, InMemoryPromotionRepository>();
+builder.Services.AddScoped<IDomainEventDispatcher, InMemoryDomainEventDispatcher>();
+builder.Services.AddSingleton<IDeploymentPort, NoOpDeploymentPort>();
+builder.Services.AddSingleton<IIssueTrackerPort, InMemoryIssueTrackerPort>();
+builder.Services.AddSingleton<INotificationPort, InMemoryNotificationPort>();
 
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.RequestPromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.RequestPromotionCommandHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.ApprovePromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.ApprovePromotionCommandHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.StartDeploymentCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.StartDeploymentCommandHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.CompletePromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.CompletePromotionCommandHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.RollbackPromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.RollbackPromotionCommandHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.ICommandHandler<ReleasePilot.Api.Application.Promotions.Commands.CancelPromotionCommand, ReleasePilot.Api.Application.Promotions.PromotionDto>, ReleasePilot.Api.Application.Promotions.Commands.CancelPromotionCommandHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsQuery, IReadOnlyCollection<ReleasePilot.Api.Application.Promotions.PromotionDto>>, ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsQueryHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.ListApplicationsQuery, IReadOnlyCollection<string>>, ReleasePilot.Api.Application.Promotions.Queries.ListApplicationsQueryHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.GetPromotionByIdQuery, ReleasePilot.Api.Application.Promotions.PromotionDto?>, ReleasePilot.Api.Application.Promotions.Queries.GetPromotionByIdQueryHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsByApplicationQuery, ReleasePilot.Api.Application.Promotions.Queries.PaginatedPromotionsResult>, ReleasePilot.Api.Application.Promotions.Queries.ListPromotionsByApplicationQueryHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IQueryHandler<ReleasePilot.Api.Application.Promotions.Queries.GetEnvironmentStatusQuery, ReleasePilot.Api.Application.Promotions.Queries.EnvironmentStatusResult>, ReleasePilot.Api.Application.Promotions.Queries.GetEnvironmentStatusQueryHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Promotions.Events.PromotionTerminalStateNotificationHandler>();
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Domain.Promotions.Events.PromotionLifecycleLoggingEventHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Application.Promotions.Events.PromotionTerminalStateNotificationHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Application.Promotions.Events.PromotionTerminalStateNotificationHandler>());
-builder.Services.AddScoped<ReleasePilot.Api.Application.Abstractions.IDomainEventHandler<ReleasePilot.Api.Domain.Promotions.Events.PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<ReleasePilot.Api.Application.Promotions.Events.PromotionTerminalStateNotificationHandler>());
+builder.Services.AddScoped<ICommandHandler<RequestPromotionCommand, PromotionDto>, RequestPromotionCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<ApprovePromotionCommand, PromotionDto>, ApprovePromotionCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<StartDeploymentCommand, PromotionDto>, StartDeploymentCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<CompletePromotionCommand, PromotionDto>, CompletePromotionCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<RollbackPromotionCommand, PromotionDto>, RollbackPromotionCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<CancelPromotionCommand, PromotionDto>, CancelPromotionCommandHandler>();
+builder.Services.AddScoped<IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>>, ListPromotionsQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>>, ListApplicationsQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<GetPromotionByIdQuery, PromotionDto?>, GetPromotionByIdQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<ListPromotionsByApplicationQuery, PaginatedPromotionsResult>, ListPromotionsByApplicationQueryHandler>();
+builder.Services.AddScoped<IQueryHandler<GetEnvironmentStatusQuery, EnvironmentStatusResult>, GetEnvironmentStatusQueryHandler>();
+builder.Services.AddScoped<PromotionLifecycleLoggingEventHandler>();
+builder.Services.AddScoped<PromotionTerminalStateNotificationHandler>();
+builder.Services.AddScoped<IDomainEventHandler<PromotionRequestedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionApprovedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<DeploymentStartedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionLifecycleLoggingEventHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionCompletedDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionRolledBackDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
+builder.Services.AddScoped<IDomainEventHandler<PromotionCancelledDomainEvent>>(sp => sp.GetRequiredService<PromotionTerminalStateNotificationHandler>());
 
 var app = builder.Build();
 
@@ -44,7 +56,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseMiddleware<ReleasePilot.Api.Middleware.ApiExceptionHandlingMiddleware>();
+app.UseMiddleware<ApiExceptionHandlingMiddleware>();
 
 app.MapControllers();
 
