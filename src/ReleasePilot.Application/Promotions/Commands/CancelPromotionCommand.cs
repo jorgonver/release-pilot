@@ -2,9 +2,9 @@ using ReleasePilot.Api.Application.Abstractions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record CancelPromotionCommand(Guid PromotionId, string ActingUser) : ICommand<PromotionDto>;
+public sealed record CancelPromotionCommand(Guid PromotionId, string ActingUser) : ICommand<PromotionCommandResult>;
 
-public sealed class CancelPromotionCommandHandler : ICommandHandler<CancelPromotionCommand, PromotionDto>
+public sealed class CancelPromotionCommandHandler : ICommandHandler<CancelPromotionCommand, PromotionCommandResult>
 {
     private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
@@ -15,7 +15,7 @@ public sealed class CancelPromotionCommandHandler : ICommandHandler<CancelPromot
         _eventDispatcher = eventDispatcher;
     }
 
-    public async Task<PromotionDto> HandleAsync(CancelPromotionCommand command, CancellationToken cancellationToken)
+    public async Task<PromotionCommandResult> HandleAsync(CancelPromotionCommand command, CancellationToken cancellationToken)
     {
         var promotion = await _promotionRepository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
@@ -25,6 +25,6 @@ public sealed class CancelPromotionCommandHandler : ICommandHandler<CancelPromot
         await _promotionRepository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
-        return promotion.ToDto();
+        return new PromotionCommandResult(promotion.Id);
     }
 }

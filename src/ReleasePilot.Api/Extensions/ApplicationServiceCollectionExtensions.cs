@@ -12,12 +12,12 @@ public static class ApplicationServiceCollectionExtensions
     {
         services.AddScoped<IRequestDispatcher, RequestDispatcher>();
 
-        services.AddScoped<ICommandHandler<RequestPromotionCommand, PromotionDto>, RequestPromotionCommandHandler>();
-        services.AddScoped<ICommandHandler<ApprovePromotionCommand, PromotionDto>, ApprovePromotionCommandHandler>();
-        services.AddScoped<ICommandHandler<StartDeploymentCommand, PromotionDto>, StartDeploymentCommandHandler>();
-        services.AddScoped<ICommandHandler<CompletePromotionCommand, PromotionDto>, CompletePromotionCommandHandler>();
-        services.AddScoped<ICommandHandler<RollbackPromotionCommand, PromotionDto>, RollbackPromotionCommandHandler>();
-        services.AddScoped<ICommandHandler<CancelPromotionCommand, PromotionDto>, CancelPromotionCommandHandler>();
+        services.AddScoped<ICommandHandler<RequestPromotionCommand, PromotionCommandResult>, RequestPromotionCommandHandler>();
+        services.AddScoped<ICommandHandler<ApprovePromotionCommand, PromotionCommandResult>, ApprovePromotionCommandHandler>();
+        services.AddScoped<ICommandHandler<StartDeploymentCommand, PromotionCommandResult>, StartDeploymentCommandHandler>();
+        services.AddScoped<ICommandHandler<CompletePromotionCommand, PromotionCommandResult>, CompletePromotionCommandHandler>();
+        services.AddScoped<ICommandHandler<RollbackPromotionCommand, PromotionCommandResult>, RollbackPromotionCommandHandler>();
+        services.AddScoped<ICommandHandler<CancelPromotionCommand, PromotionCommandResult>, CancelPromotionCommandHandler>();
 
         services.AddScoped<IQueryHandler<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>>, ListPromotionsQueryHandler>();
         services.AddScoped<IQueryHandler<ListApplicationsQuery, IReadOnlyCollection<string>>, ListApplicationsQueryHandler>();

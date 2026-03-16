@@ -3,9 +3,9 @@ using ReleasePilot.Api.Domain.Promotions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record ApprovePromotionCommand(Guid PromotionId, string RequestedByRole, string ActingUser) : ICommand<PromotionDto>;
+public sealed record ApprovePromotionCommand(Guid PromotionId, string RequestedByRole, string ActingUser) : ICommand<PromotionCommandResult>;
 
-public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApprovePromotionCommand, PromotionDto>
+public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApprovePromotionCommand, PromotionCommandResult>
 {
     private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
@@ -16,7 +16,7 @@ public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApproveProm
         _eventDispatcher = eventDispatcher;
     }
 
-    public async Task<PromotionDto> HandleAsync(ApprovePromotionCommand command, CancellationToken cancellationToken)
+    public async Task<PromotionCommandResult> HandleAsync(ApprovePromotionCommand command, CancellationToken cancellationToken)
     {
         var promotion = await _promotionRepository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
@@ -29,6 +29,6 @@ public sealed class ApprovePromotionCommandHandler : ICommandHandler<ApproveProm
         await _promotionRepository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
-        return promotion.ToDto();
+        return new PromotionCommandResult(promotion.Id);
     }
 }

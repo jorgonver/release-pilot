@@ -173,13 +173,25 @@ assert_json_condition ".stateHistory | length >= 1"
 log "3) Approve -> Start -> Complete"
 request POST "/api/promotions/$PROMO_COMPLETE_ID/approve" "{ \"requestedByRole\": \"Approver\", \"actingUser\": \"smoke.approver\" }"
 assert_status 200
+assert_json_condition ".id == \"$PROMO_COMPLETE_ID\""
+
+request GET "/api/promotions/$PROMO_COMPLETE_ID"
+assert_status 200
 assert_json_condition '.status == "Approved"'
 
 request POST "/api/promotions/$PROMO_COMPLETE_ID/start" "{ \"actingUser\": \"smoke.deployer\" }"
 assert_status 200
+assert_json_condition ".id == \"$PROMO_COMPLETE_ID\""
+
+request GET "/api/promotions/$PROMO_COMPLETE_ID"
+assert_status 200
 assert_json_condition '.status == "InProgress"'
 
 request POST "/api/promotions/$PROMO_COMPLETE_ID/complete" "{ \"actingUser\": \"smoke.deployer\" }"
+assert_status 200
+assert_json_condition ".id == \"$PROMO_COMPLETE_ID\""
+
+request GET "/api/promotions/$PROMO_COMPLETE_ID"
 assert_status 200
 assert_json_condition '.status == "Completed"'
 assert_json_condition '.completedAt != null'
@@ -200,9 +212,15 @@ PROMO_ROLLBACK_ID="$(json_get '.id')"
 
 request POST "/api/promotions/$PROMO_ROLLBACK_ID/approve" "{ \"requestedByRole\": \"Approver\", \"actingUser\": \"smoke.approver\" }"
 assert_status 200
+assert_json_condition ".id == \"$PROMO_ROLLBACK_ID\""
 request POST "/api/promotions/$PROMO_ROLLBACK_ID/start" "{ \"actingUser\": \"smoke.deployer\" }"
 assert_status 200
+assert_json_condition ".id == \"$PROMO_ROLLBACK_ID\""
 request POST "/api/promotions/$PROMO_ROLLBACK_ID/rollback" "{ \"reason\": \"Smoke rollback validation\", \"actingUser\": \"smoke.operator\" }"
+assert_status 200
+assert_json_condition ".id == \"$PROMO_ROLLBACK_ID\""
+
+request GET "/api/promotions/$PROMO_ROLLBACK_ID"
 assert_status 200
 assert_json_condition '.status == "RolledBack"'
 assert_json_condition '.rolledBackReason == "Smoke rollback validation"'
@@ -220,6 +238,10 @@ assert_status 201
 PROMO_CANCEL_ID="$(json_get '.id')"
 
 request POST "/api/promotions/$PROMO_CANCEL_ID/cancel" "{ \"actingUser\": \"smoke.operator\" }"
+assert_status 200
+assert_json_condition ".id == \"$PROMO_CANCEL_ID\""
+
+request GET "/api/promotions/$PROMO_CANCEL_ID"
 assert_status 200
 assert_json_condition '.status == "Cancelled"'
 

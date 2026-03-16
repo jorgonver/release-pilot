@@ -2,9 +2,9 @@ using ReleasePilot.Api.Application.Abstractions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
-public sealed record RollbackPromotionCommand(Guid PromotionId, string Reason, string ActingUser) : ICommand<PromotionDto>;
+public sealed record RollbackPromotionCommand(Guid PromotionId, string Reason, string ActingUser) : ICommand<PromotionCommandResult>;
 
-public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPromotionCommand, PromotionDto>
+public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPromotionCommand, PromotionCommandResult>
 {
     private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
@@ -15,7 +15,7 @@ public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPr
         _eventDispatcher = eventDispatcher;
     }
 
-    public async Task<PromotionDto> HandleAsync(RollbackPromotionCommand command, CancellationToken cancellationToken)
+    public async Task<PromotionCommandResult> HandleAsync(RollbackPromotionCommand command, CancellationToken cancellationToken)
     {
         var promotion = await _promotionRepository.GetByIdAsync(command.PromotionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Promotion '{command.PromotionId}' was not found.");
@@ -25,6 +25,6 @@ public sealed class RollbackPromotionCommandHandler : ICommandHandler<RollbackPr
         await _promotionRepository.UpdateAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
-        return promotion.ToDto();
+        return new PromotionCommandResult(promotion.Id);
     }
 }

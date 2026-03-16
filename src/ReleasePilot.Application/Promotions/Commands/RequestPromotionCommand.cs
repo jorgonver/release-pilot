@@ -3,17 +3,19 @@ using ReleasePilot.Api.Domain.Promotions;
 
 namespace ReleasePilot.Api.Application.Promotions.Commands;
 
+public sealed record PromotionCommandResult(Guid Id);
+
 public sealed record RequestPromotionCommand(
     string ApplicationName,
     string Version,
     string SourceEnvironment,
     string TargetEnvironment,
     string ActingUser,
-    IReadOnlyCollection<RequestPromotionWorkItemInput> WorkItems) : ICommand<PromotionDto>;
+    IReadOnlyCollection<RequestPromotionWorkItemInput> WorkItems) : ICommand<PromotionCommandResult>;
 
 public sealed record RequestPromotionWorkItemInput(string ExternalId, string? Title);
 
-public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestPromotionCommand, PromotionDto>
+public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestPromotionCommand, PromotionCommandResult>
 {
     private readonly IPromotionRepository _promotionRepository;
     private readonly IDomainEventDispatcher _eventDispatcher;
@@ -24,7 +26,7 @@ public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestProm
         _eventDispatcher = eventDispatcher;
     }
 
-    public async Task<PromotionDto> HandleAsync(RequestPromotionCommand command, CancellationToken cancellationToken)
+    public async Task<PromotionCommandResult> HandleAsync(RequestPromotionCommand command, CancellationToken cancellationToken)
     {
         var existingPromotions = await _promotionRepository.ListAsync(cancellationToken);
         PromotionDomainRules.EnsureCanRequest(
@@ -49,6 +51,6 @@ public sealed class RequestPromotionCommandHandler : ICommandHandler<RequestProm
         await _promotionRepository.AddAsync(promotion, cancellationToken);
         await _eventDispatcher.DispatchAsync(promotion.PullDomainEvents(), cancellationToken);
 
-        return promotion.ToDto();
+        return new PromotionCommandResult(promotion.Id);
     }
 }

@@ -82,14 +82,14 @@ public class PromotionController : ControllerBase
                 .Select(item => new RequestPromotionWorkItemInput(item.ExternalId, item.Title))
                 .ToArray());
 
-        var created = await _dispatcher.SendCommandAsync<RequestPromotionCommand, PromotionDto>(command, cancellationToken);
+        var created = await _dispatcher.SendCommandAsync<RequestPromotionCommand, PromotionCommandResult>(command, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, [FromBody] ApprovePromotionDto request, CancellationToken cancellationToken)
     {
-        var updated = await _dispatcher.SendCommandAsync<ApprovePromotionCommand, PromotionDto>(
+        var updated = await _dispatcher.SendCommandAsync<ApprovePromotionCommand, PromotionCommandResult>(
             new ApprovePromotionCommand(id, request.RequestedByRole, request.ActingUser),
             cancellationToken);
         return Ok(updated);
@@ -98,7 +98,7 @@ public class PromotionController : ControllerBase
     [HttpPost("{id:guid}/start")]
     public async Task<IActionResult> Start(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
-        var updated = await _dispatcher.SendCommandAsync<StartDeploymentCommand, PromotionDto>(
+        var updated = await _dispatcher.SendCommandAsync<StartDeploymentCommand, PromotionCommandResult>(
             new StartDeploymentCommand(id, request.ActingUser),
             cancellationToken);
         return Ok(updated);
@@ -107,7 +107,7 @@ public class PromotionController : ControllerBase
     [HttpPost("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
-        var updated = await _dispatcher.SendCommandAsync<CompletePromotionCommand, PromotionDto>(
+        var updated = await _dispatcher.SendCommandAsync<CompletePromotionCommand, PromotionCommandResult>(
             new CompletePromotionCommand(id, request.ActingUser),
             cancellationToken);
         return Ok(updated);
@@ -116,7 +116,7 @@ public class PromotionController : ControllerBase
     [HttpPost("{id:guid}/rollback")]
     public async Task<IActionResult> Rollback(Guid id, [FromBody] RollbackPromotionDto request, CancellationToken cancellationToken)
     {
-        var updated = await _dispatcher.SendCommandAsync<RollbackPromotionCommand, PromotionDto>(
+        var updated = await _dispatcher.SendCommandAsync<RollbackPromotionCommand, PromotionCommandResult>(
             new RollbackPromotionCommand(id, request.Reason, request.ActingUser),
             cancellationToken);
         return Ok(updated);
@@ -125,7 +125,7 @@ public class PromotionController : ControllerBase
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
-        var updated = await _dispatcher.SendCommandAsync<CancelPromotionCommand, PromotionDto>(
+        var updated = await _dispatcher.SendCommandAsync<CancelPromotionCommand, PromotionCommandResult>(
             new CancelPromotionCommand(id, request.ActingUser),
             cancellationToken);
         return Ok(updated);

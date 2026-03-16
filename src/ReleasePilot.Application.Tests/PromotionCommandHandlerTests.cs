@@ -32,9 +32,10 @@ public class PromotionCommandHandlerTests
 
         var result = await handler.HandleAsync(command, cancellationToken);
 
-        Assert.Equal("Requested", result.Status);
+        Assert.NotEqual(Guid.Empty, result.Id);
         await repository.Received(1)
             .AddAsync(Arg.Is<Promotion>(p =>
+            p.Id == result.Id &&
                 p.ApplicationName == "checkout-service" &&
                 p.Version == "1.2.3" &&
                 p.Status == PromotionStatus.Requested), cancellationToken);
@@ -78,7 +79,7 @@ public class PromotionCommandHandlerTests
 
         var result = await handler.HandleAsync(new StartDeploymentCommand(promotion.Id, "deployer-user"), cancellationToken);
 
-        Assert.Equal("InProgress", result.Status);
+        Assert.Equal(promotion.Id, result.Id);
         await deploymentPort.Received(1).StartDeploymentAsync(
             Arg.Is<DeploymentRequest>(request =>
                 request.PromotionId == promotion.Id
@@ -128,7 +129,7 @@ public class PromotionCommandHandlerTests
 
         var result = await handler.HandleAsync(new CompletePromotionCommand(promotion.Id, "deployer-user"), cancellationToken);
 
-        Assert.Equal("Completed", result.Status);
+        Assert.Equal(promotion.Id, result.Id);
         await repository.Received(1).UpdateAsync(Arg.Is<Promotion>(p => p.Status == PromotionStatus.Completed), cancellationToken);
         await eventDispatcher.Received(1)
             .DispatchAsync(Arg.Is<IReadOnlyCollection<IDomainEvent>>(events =>
@@ -168,7 +169,7 @@ public class PromotionCommandHandlerTests
 
         var result = await handler.HandleAsync(new RollbackPromotionCommand(promotion.Id, "deployment failed", "deployer-user"), cancellationToken);
 
-        Assert.Equal("RolledBack", result.Status);
+        Assert.Equal(promotion.Id, result.Id);
         await repository.Received(1)
             .UpdateAsync(Arg.Is<Promotion>(p =>
                 p.Status == PromotionStatus.RolledBack && p.RolledBackReason == "deployment failed"), cancellationToken);
@@ -210,7 +211,7 @@ public class PromotionCommandHandlerTests
 
         var result = await handler.HandleAsync(new CancelPromotionCommand(promotion.Id, "requester-user"), cancellationToken);
 
-        Assert.Equal("Cancelled", result.Status);
+        Assert.Equal(promotion.Id, result.Id);
         await repository.Received(1).UpdateAsync(Arg.Is<Promotion>(p => p.Status == PromotionStatus.Cancelled), cancellationToken);
         await eventDispatcher.Received(1)
             .DispatchAsync(Arg.Is<IReadOnlyCollection<IDomainEvent>>(events =>
