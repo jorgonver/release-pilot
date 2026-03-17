@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <!-- Shared defaults for all projects in this repository -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Keep builds deterministic and CI-friendly -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Enforce consistent warning behavior across projects -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+  </PropertyGroup>
+</Project>

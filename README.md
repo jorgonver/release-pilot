@@ -173,6 +173,9 @@ Base URL used below:
 BASE_URL=http://localhost:5252
 ```
 
+Command endpoints return a write acknowledgement payload (`{"id":"..."}`), not the full promotion read model.
+Use query endpoints (for example `GET /api/promotions/{id}`) to read current status.
+
 1. Request promotion (`POST /api/promotions`):
 
 ```bash
@@ -211,6 +214,12 @@ curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/approve" \
 	}'
 ```
 
+Verify state via query:
+
+```bash
+curl -sS "$BASE_URL/api/promotions/$PROMOTION_ID" | jq -r '.status'
+```
+
 3. Start deployment (`POST /api/promotions/{id}/start`):
 
 ```bash
@@ -221,6 +230,12 @@ curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/start" \
 	}'
 ```
 
+Verify state via query:
+
+```bash
+curl -sS "$BASE_URL/api/promotions/$PROMOTION_ID" | jq -r '.status'
+```
+
 4. Complete promotion (`POST /api/promotions/{id}/complete`):
 
 ```bash
@@ -229,6 +244,12 @@ curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/complete" \
 	-d '{
 		"actingUser": "deployer-user"
 	}'
+```
+
+Verify terminal state via query:
+
+```bash
+curl -sS "$BASE_URL/api/promotions/$PROMOTION_ID" | jq '{status, completedAt}'
 ```
 
 5. Rollback promotion (`POST /api/promotions/{id}/rollback`):
@@ -242,6 +263,12 @@ curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/rollback" \
 	}'
 ```
 
+Verify terminal state via query:
+
+```bash
+curl -sS "$BASE_URL/api/promotions/$PROMOTION_ID" | jq '{status, rolledBackReason}'
+```
+
 6. Cancel promotion (`POST /api/promotions/{id}/cancel`):
 
 ```bash
@@ -250,6 +277,12 @@ curl -sS -X POST "$BASE_URL/api/promotions/$PROMOTION_ID/cancel" \
 	-d '{
 		"actingUser": "requester-user"
 	}'
+```
+
+Verify terminal state via query:
+
+```bash
+curl -sS "$BASE_URL/api/promotions/$PROMOTION_ID" | jq -r '.status'
 ```
 
 Note: `complete` and `rollback` are alternative terminal actions after `start`; run one or the other in a single flow.
