@@ -7,7 +7,7 @@ namespace ReleasePilot.Domain.Tests;
 public class PromotionAggregateTests
 {
     [Fact]
-    public void Create_WithValidData_SetsRequestedStateAndRaisesRequestedEvent()
+    public void CreateWithValidDataSetsRequestedStateAndRaisesRequestedEvent()
     {
         var promotion = Promotion.Create(
             applicationName: " checkout-service ",
@@ -32,7 +32,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Approve_WithNonApproverRole_ThrowsDomainRuleViolation()
+    public void ApproveWithNonApproverRoleThrowsDomainRuleViolation()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -44,7 +44,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Approve_WithApproverRole_TransitionsToApprovedAndRaisesEvent()
+    public void ApproveWithApproverRoleTransitionsToApprovedAndRaisesEvent()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -59,7 +59,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Start_FromRequested_ThrowsDomainRuleViolation()
+    public void StartFromRequestedThrowsDomainRuleViolation()
     {
         var promotion = CreateRequestedPromotion();
 
@@ -70,7 +70,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Complete_FromApproved_ThrowsDomainRuleViolation()
+    public void CompleteFromApprovedThrowsDomainRuleViolation()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -83,7 +83,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Complete_AfterApproveAndStart_SetsCompletedAtAndEmitsCompletedEvent()
+    public void CompleteAfterApproveAndStartSetsCompletedAtAndEmitsCompletedEvent()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -101,7 +101,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Rollback_WithoutReason_ThrowsDomainRuleViolation()
+    public void RollbackWithoutReasonThrowsDomainRuleViolation()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -115,7 +115,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Rollback_WithReason_TransitionsToRolledBackAndRaisesEvent()
+    public void RollbackWithReasonTransitionsToRolledBackAndRaisesEvent()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -134,7 +134,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Cancel_AfterApproval_ThrowsDomainRuleViolation()
+    public void CancelAfterApprovalThrowsDomainRuleViolation()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -147,7 +147,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Cancel_FromRequested_TransitionsToCancelledAndRaisesEvent()
+    public void CancelFromRequestedTransitionsToCancelledAndRaisesEvent()
     {
         var promotion = CreateRequestedPromotion();
         promotion.PullDomainEvents();
@@ -162,7 +162,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Create_WithSkippedEnvironmentPath_ThrowsDomainRuleViolation()
+    public void CreateWithSkippedEnvironmentPathThrowsDomainRuleViolation()
     {
         var action = () => Promotion.Create(
             applicationName: "checkout-service",
@@ -176,7 +176,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Create_WithSameSourceAndTarget_ThrowsDomainRuleViolation()
+    public void CreateWithSameSourceAndTargetThrowsDomainRuleViolation()
     {
         var action = () => Promotion.Create(
             applicationName: "checkout-service",
@@ -190,7 +190,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Create_WithoutActingUser_ThrowsDomainRuleViolation()
+    public void CreateWithoutActingUserThrowsDomainRuleViolation()
     {
         var action = () => Promotion.Create(
             applicationName: "checkout-service",
@@ -204,7 +204,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void PullDomainEvents_ReturnsAndClearsPendingEvents()
+    public void PullDomainEventsReturnsAndClearsPendingEvents()
     {
         var promotion = CreateRequestedPromotion();
 
@@ -215,7 +215,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Rehydrate_WithInvalidStatus_ThrowsDomainRuleViolation()
+    public void RehydrateWithInvalidStatusThrowsDomainRuleViolation()
     {
         var action = () => Promotion.Rehydrate(
             id: Guid.NewGuid(),
@@ -236,7 +236,7 @@ public class PromotionAggregateTests
     }
 
     [Fact]
-    public void Rehydrate_WithValidState_DoesNotRaiseDomainEvents()
+    public void RehydrateWithValidStateDoesNotRaiseDomainEvents()
     {
         var createdAt = DateTimeOffset.UtcNow.AddMinutes(-10);
         var updatedAt = DateTimeOffset.UtcNow.AddMinutes(-1);

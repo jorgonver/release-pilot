@@ -10,7 +10,7 @@ namespace ReleasePilot.Application.Tests;
 public class PromotionCommandHandlerTests
 {
     [Fact]
-    public async Task RequestPromotionCommandHandler_AddsPromotionAndDispatchesRequestedEvent()
+    public async Task RequestPromotionCommandHandlerAddsPromotionAndDispatchesRequestedEvent()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -45,7 +45,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task ApprovePromotionCommandHandler_WhenPromotionNotFound_ThrowsKeyNotFoundException()
+    public async Task ApprovePromotionCommandHandlerWhenPromotionNotFoundThrowsKeyNotFoundException()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -64,7 +64,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task StartDeploymentCommandHandler_StartsDeployment_UpdatesPromotion_AndDispatchesEvent()
+    public async Task StartDeploymentCommandHandlerStartsDeploymentUpdatesPromotionAndDispatchesEvent()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -95,7 +95,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task StartDeploymentCommandHandler_WhenPromotionNotFound_ThrowsKeyNotFoundException()
+    public async Task StartDeploymentCommandHandlerWhenPromotionNotFoundThrowsKeyNotFoundException()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -116,7 +116,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task CompletePromotionCommandHandler_CompletesPromotion_UpdatesAndDispatchesEvent()
+    public async Task CompletePromotionCommandHandlerCompletesPromotionUpdatesAndDispatchesEvent()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -137,7 +137,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task CompletePromotionCommandHandler_WhenPromotionNotFound_ThrowsKeyNotFoundException()
+    public async Task CompletePromotionCommandHandlerWhenPromotionNotFoundThrowsKeyNotFoundException()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -156,7 +156,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task RollbackPromotionCommandHandler_RollsBackPromotion_UpdatesAndDispatchesEvent()
+    public async Task RollbackPromotionCommandHandlerRollsBackPromotionUpdatesAndDispatchesEvent()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -179,7 +179,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task RollbackPromotionCommandHandler_WhenPromotionNotFound_ThrowsKeyNotFoundException()
+    public async Task RollbackPromotionCommandHandlerWhenPromotionNotFoundThrowsKeyNotFoundException()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -198,7 +198,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task CancelPromotionCommandHandler_CancelsPromotion_UpdatesAndDispatchesEvent()
+    public async Task CancelPromotionCommandHandlerCancelsPromotionUpdatesAndDispatchesEvent()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();
@@ -219,7 +219,7 @@ public class PromotionCommandHandlerTests
     }
 
     [Fact]
-    public async Task CancelPromotionCommandHandler_WhenPromotionNotFound_ThrowsKeyNotFoundException()
+    public async Task CancelPromotionCommandHandlerWhenPromotionNotFoundThrowsKeyNotFoundException()
     {
         var repository = Substitute.For<IPromotionRepository>();
         var eventDispatcher = Substitute.For<IDomainEventDispatcher>();

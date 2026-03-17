@@ -6,7 +6,7 @@ namespace ReleasePilot.Domain.Tests;
 public class WorkItemReferenceTests
 {
     [Fact]
-    public void Constructor_WithBlankExternalId_ThrowsDomainRuleViolation()
+    public void ConstructorWithBlankExternalIdThrowsDomainRuleViolation()
     {
         var action = () => new WorkItemReference("   ", "Some title");
 
@@ -15,7 +15,7 @@ public class WorkItemReferenceTests
     }
 
     [Fact]
-    public void Constructor_WithValidData_TrimsExternalIdAndTitle()
+    public void ConstructorWithValidDataTrimsExternalIdAndTitle()
     {
         var reference = new WorkItemReference(" WI-123 ", "  Fix payment timeout  ");
 
@@ -24,7 +24,7 @@ public class WorkItemReferenceTests
     }
 
     [Fact]
-    public void Constructor_WithBlankTitle_SetsTitleToNull()
+    public void ConstructorWithBlankTitleSetsTitleToNull()
     {
         var reference = new WorkItemReference("WI-123", "   ");
 

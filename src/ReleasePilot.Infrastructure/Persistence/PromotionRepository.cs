@@ -212,7 +212,7 @@ public sealed class PromotionRepository : IPromotionRepository
         return (PromotionStatus)value;
     }
 
-    private static IReadOnlyCollection<WorkItemReference> DeserializeWorkItems(string json)
+    private static WorkItemReference[] DeserializeWorkItems(string json)
     {
         var items = JsonSerializer.Deserialize<IReadOnlyCollection<WorkItemData>>(json, JsonOptions)
             ?? Array.Empty<WorkItemData>();
@@ -222,7 +222,7 @@ public sealed class PromotionRepository : IPromotionRepository
             .ToArray();
     }
 
-    private static IReadOnlyCollection<PromotionStateHistoryEntry> DeserializeStateHistory(string json)
+    private static PromotionStateHistoryEntry[] DeserializeStateHistory(string json)
     {
         var entries = JsonSerializer.Deserialize<IReadOnlyCollection<PromotionStateHistoryData>>(json, JsonOptions)
             ?? Array.Empty<PromotionStateHistoryData>();

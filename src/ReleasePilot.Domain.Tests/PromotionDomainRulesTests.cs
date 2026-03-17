@@ -6,7 +6,7 @@ namespace ReleasePilot.Domain.Tests;
 public class PromotionDomainRulesTests
 {
     [Fact]
-    public void EnsureCanRequest_ToProduction_WhenCompletedInStaging_DoesNotThrow()
+    public void EnsureCanRequestToProductionWhenCompletedInStagingDoesNotThrow()
     {
         var completedStaging = Promotion.Rehydrate(
             id: Guid.NewGuid(),
@@ -31,7 +31,7 @@ public class PromotionDomainRulesTests
     }
 
     [Fact]
-    public void EnsureCanRequest_ToProduction_WithoutCompletedInStaging_ThrowsDomainRuleViolation()
+    public void EnsureCanRequestToProductionWithoutCompletedInStagingThrowsDomainRuleViolation()
     {
         var pendingStaging = Promotion.Rehydrate(
             id: Guid.NewGuid(),
@@ -59,7 +59,7 @@ public class PromotionDomainRulesTests
     }
 
     [Fact]
-    public void EnsureEnvironmentNotLocked_WhenOtherInProgressForSameAppAndTarget_ThrowsDomainRuleViolation()
+    public void EnsureEnvironmentNotLockedWhenOtherInProgressForSameAppAndTargetThrowsDomainRuleViolation()
     {
         var current = Promotion.Rehydrate(
             id: Guid.NewGuid(),
@@ -96,7 +96,7 @@ public class PromotionDomainRulesTests
     }
 
     [Fact]
-    public void EnsureEnvironmentNotLocked_WhenInProgressIsDifferentTarget_DoesNotThrow()
+    public void EnsureEnvironmentNotLockedWhenInProgressIsDifferentTargetDoesNotThrow()
     {
         var current = Promotion.Rehydrate(
             id: Guid.NewGuid(),

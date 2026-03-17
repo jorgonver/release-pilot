@@ -8,7 +8,7 @@ namespace ReleasePilot.Application.Tests;
 public class RequestDispatcherTests
 {
     [Fact]
-    public async Task SendCommandAsync_ExecutesInsideTransactionAndCallsCommandHandler()
+    public async Task SendCommandAsyncExecutesInsideTransactionAndCallsCommandHandler()
     {
         var services = new ServiceCollection();
         var commandHandler = Substitute.For<ICommandHandler<TestCommand, string>>();
@@ -41,7 +41,7 @@ public class RequestDispatcherTests
     }
 
     [Fact]
-    public async Task SendQueryAsync_CallsQueryHandlerWithoutTransactionExecutor()
+    public async Task SendQueryAsyncCallsQueryHandlerWithoutTransactionExecutor()
     {
         var services = new ServiceCollection();
         var queryHandler = Substitute.For<IQueryHandler<TestQuery, int>>();

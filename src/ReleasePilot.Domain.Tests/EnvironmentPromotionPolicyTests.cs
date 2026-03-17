@@ -6,7 +6,7 @@ namespace ReleasePilot.Domain.Tests;
 public class EnvironmentPromotionPolicyTests
 {
     [Fact]
-    public void Normalize_Development_ReturnsDev()
+    public void NormalizeDevelopmentReturnsDev()
     {
         var normalized = EnvironmentPromotionPolicy.Normalize(" development ");
 
@@ -14,7 +14,7 @@ public class EnvironmentPromotionPolicyTests
     }
 
     [Fact]
-    public void EnsureKnown_WithUnknownEnvironment_ThrowsDomainRuleViolation()
+    public void EnsureKnownWithUnknownEnvironmentThrowsDomainRuleViolation()
     {
         var action = () => EnvironmentPromotionPolicy.EnsureKnown("qa", "targetEnvironment");
 
@@ -23,14 +23,14 @@ public class EnvironmentPromotionPolicyTests
     }
 
     [Fact]
-    public void EnsureAdjacentPromotionPath_WithValidPaths_DoesNotThrow()
+    public void EnsureAdjacentPromotionPathWithValidPathsDoesNotThrow()
     {
         EnvironmentPromotionPolicy.EnsureAdjacentPromotionPath("dev", "staging");
         EnvironmentPromotionPolicy.EnsureAdjacentPromotionPath("staging", "production");
     }
 
     [Fact]
-    public void EnsureAdjacentPromotionPath_WithReverseOrSkippedPath_ThrowsDomainRuleViolation()
+    public void EnsureAdjacentPromotionPathWithReverseOrSkippedPathThrowsDomainRuleViolation()
     {
         var reverse = () => EnvironmentPromotionPolicy.EnsureAdjacentPromotionPath("production", "staging");
         var skipped = () => EnvironmentPromotionPolicy.EnsureAdjacentPromotionPath("dev", "production");
