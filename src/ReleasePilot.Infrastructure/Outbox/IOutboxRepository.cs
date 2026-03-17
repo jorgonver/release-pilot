@@ -8,5 +8,6 @@ public interface IOutboxRepository
 
     Task MarkProcessedAsync(Guid id, CancellationToken cancellationToken);
 
+    #pragma warning disable CA1716 // Identifiers should not match keywords
     Task MarkFailedAsync(Guid id, string error, int retryDelaySeconds, CancellationToken cancellationToken);
 }
