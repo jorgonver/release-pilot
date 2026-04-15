@@ -40,6 +40,12 @@ public sealed class RabbitMqPromotionEventConsumer : IPromotionEventConsumer
             try
             {
                 var message = DeserializeMessage(eventArgs.Body.ToArray());
+                var correlationId = eventArgs.BasicProperties?.CorrelationId;
+                if (!string.IsNullOrWhiteSpace(correlationId))
+                {
+                    message = message with { CorrelationId = correlationId };
+                }
+
                 await onMessage(message, cancellationToken);
                 await AckAsync(_channel, eventArgs.DeliveryTag, cancellationToken);
             }
@@ -127,6 +133,11 @@ public sealed class RabbitMqPromotionEventConsumer : IPromotionEventConsumer
         if (message is null)
         {
             throw new InvalidOperationException("Received empty promotion event message.");
+        }
+
+        if (string.IsNullOrWhiteSpace(message.CorrelationId))
+        {
+            return message with { CorrelationId = Guid.NewGuid().ToString("N") };
         }
 
         return message;

@@ -40,8 +40,8 @@ public sealed class AuditLogRepository : IAuditLogRepository
     public async Task InsertAsync(PromotionEventMessage message, CancellationToken cancellationToken)
     {
         const string sql = """
-            INSERT INTO audit_log (event_id, event_type, promotion_id, occurred_at, acting_user, payload_json)
-            VALUES (@EventId, @EventType, @PromotionId, @OccurredAt, @ActingUser, CAST(@PayloadJson AS JSONB))
+            INSERT INTO audit_log (event_id, correlation_id, event_type, promotion_id, occurred_at, acting_user, payload_json)
+            VALUES (@EventId, @CorrelationId, @EventType, @PromotionId, @OccurredAt, @ActingUser, CAST(@PayloadJson AS JSONB))
             ON CONFLICT (event_id) DO NOTHING;
             """;
 
@@ -50,6 +50,7 @@ public sealed class AuditLogRepository : IAuditLogRepository
         var args = new
         {
             message.EventId,
+            message.CorrelationId,
             message.EventType,
             message.PromotionId,
             OccurredAt = message.OccurredAt.UtcDateTime,

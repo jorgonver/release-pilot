@@ -87,6 +87,7 @@ public sealed class OutboxPublisherWorker : BackgroundService
                 var properties = new BasicProperties
                 {
                     Persistent = true,
+                    CorrelationId = message.CorrelationId,
                     MessageId = message.EventId.ToString(),
                     Timestamp = new AmqpTimestamp(message.OccurredAt.ToUnixTimeSeconds())
                 };

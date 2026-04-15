@@ -14,10 +14,12 @@ public sealed class PromotionOutboxEventHandler :
     IDomainEventHandler<PromotionCancelledDomainEvent>
 {
     private readonly IOutboxRepository _outboxRepository;
+    private readonly ICorrelationContextAccessor _correlationContextAccessor;
 
-    public PromotionOutboxEventHandler(IOutboxRepository outboxRepository)
+    public PromotionOutboxEventHandler(IOutboxRepository outboxRepository, ICorrelationContextAccessor correlationContextAccessor)
     {
         _outboxRepository = outboxRepository;
+        _correlationContextAccessor = correlationContextAccessor;
     }
 
     public Task HandleAsync(PromotionRequestedDomainEvent domainEvent, CancellationToken cancellationToken)
@@ -58,8 +60,13 @@ public sealed class PromotionOutboxEventHandler :
         DateTimeOffset occurredAt,
         CancellationToken cancellationToken)
     {
+        var correlationId = string.IsNullOrWhiteSpace(_correlationContextAccessor.CorrelationId)
+            ? Guid.NewGuid().ToString("N")
+            : _correlationContextAccessor.CorrelationId!;
+
         var message = new PromotionEventMessage(
             Guid.NewGuid(),
+            correlationId,
             eventType,
             promotionId,
             occurredAt,
@@ -68,6 +75,7 @@ public sealed class PromotionOutboxEventHandler :
 
         var outboxMessage = new OutboxMessage(
             message.EventId,
+            message.CorrelationId,
             message.EventType,
             message.PromotionId,
             message.OccurredAt,

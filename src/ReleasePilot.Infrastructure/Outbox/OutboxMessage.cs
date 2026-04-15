@@ -2,6 +2,7 @@ namespace ReleasePilot.Api.Infrastructure.Outbox;
 
 public sealed record OutboxMessage(
     Guid Id,
+    string CorrelationId,
     string EventType,
     Guid AggregateId,
     DateTimeOffset OccurredAt,

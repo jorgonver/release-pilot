@@ -1,4 +1,5 @@
 using ReleasePilot.Api.Middleware;
+using ReleasePilot.Api.Application.Abstractions;
 
 namespace ReleasePilot.Api.Extensions;
 
@@ -8,6 +9,7 @@ public static class ApiServiceCollectionExtensions
     {
         services.AddOpenApi();
         services.AddControllers();
+        services.AddSingleton<ICorrelationContextAccessor, CorrelationContextAccessor>();
 
         return services;
     }
@@ -20,6 +22,7 @@ public static class ApiServiceCollectionExtensions
         }
 
         app.UseHttpsRedirection();
+        app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<ApiExceptionHandlingMiddleware>();
         app.MapControllers();
 

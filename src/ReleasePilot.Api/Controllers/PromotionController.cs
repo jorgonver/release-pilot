@@ -4,6 +4,7 @@ using ReleasePilot.Api.Application.Promotions;
 using ReleasePilot.Api.Application.Promotions.Commands;
 using ReleasePilot.Api.Application.Promotions.Queries;
 using ReleasePilot.Api.Dto;
+using ReleasePilot.Api.Extensions;
 
 namespace ReleasePilot.Api.Controllers;
 
@@ -65,7 +66,7 @@ public class PromotionController : ControllerBase
             new GetPromotionByIdQuery(id),
             cancellationToken);
         return result is null
-            ? NotFound(new { message = $"Promotion '{id}' not found." })
+            ? this.NotFoundError($"Promotion '{id}' not found.")
             : Ok(result);
     }
 

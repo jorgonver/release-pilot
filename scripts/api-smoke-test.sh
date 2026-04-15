@@ -57,22 +57,61 @@ ensure_jq
 
 LAST_BODY=""
 LAST_STATUS=""
+LAST_REQUEST_CORRELATION_ID=""
+LAST_RESPONSE_CORRELATION_ID=""
+
+new_correlation_id() {
+  local stamp
+  stamp="$(date +%s%N)"
+  echo "smoke-${stamp}-${RANDOM}"
+}
+
+extract_header() {
+  local header_name="$1"
+  local headers_file="$2"
+
+  awk -F': ' -v target="$(tr '[:upper:]' '[:lower:]' <<<"$header_name")" '
+    {
+      name = tolower($1)
+      gsub("\r", "", name)
+      if (name == target) {
+        value = $2
+        gsub("\r", "", value)
+        print value
+      }
+    }
+  ' "$headers_file" | tail -n 1
+}
 
 request() {
   local method="$1"
   local path="$2"
   local payload="${3:-}"
   local body_file
+  local headers_file
   body_file="$(mktemp)"
+  headers_file="$(mktemp)"
+  LAST_REQUEST_CORRELATION_ID="$(new_correlation_id)"
 
   if [[ -n "$payload" ]]; then
-    LAST_STATUS="$(curl -sS -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "Content-Type: application/json" -d "$payload")"
+    LAST_STATUS="$(curl -sS -D "$headers_file" -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "X-Correlation-Id: $LAST_REQUEST_CORRELATION_ID" -H "Content-Type: application/json" -d "$payload")"
   else
-    LAST_STATUS="$(curl -sS -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path")"
+    LAST_STATUS="$(curl -sS -D "$headers_file" -o "$body_file" -w "%{http_code}" -X "$method" "$BASE_URL$path" -H "X-Correlation-Id: $LAST_REQUEST_CORRELATION_ID")"
   fi
+
+  LAST_RESPONSE_CORRELATION_ID="$(extract_header "X-Correlation-Id" "$headers_file")"
 
   LAST_BODY="$(cat "$body_file")"
   rm -f "$body_file"
+  rm -f "$headers_file"
+
+  if [[ -z "$LAST_RESPONSE_CORRELATION_ID" ]]; then
+    fail "Missing X-Correlation-Id response header for $method $path"
+  fi
+
+  if [[ "$LAST_RESPONSE_CORRELATION_ID" != "$LAST_REQUEST_CORRELATION_ID" ]]; then
+    fail "X-Correlation-Id mismatch for $method $path: sent '$LAST_REQUEST_CORRELATION_ID', got '$LAST_RESPONSE_CORRELATION_ID'"
+  fi
 }
 
 assert_status() {
@@ -91,6 +130,10 @@ json_get() {
 assert_json_condition() {
   local jq_condition="$1"
   jq -e "$jq_condition" <<<"$LAST_BODY" >/dev/null || fail "JSON assertion failed: $jq_condition | Body: $LAST_BODY"
+}
+
+assert_error_has_correlation_id() {
+  assert_json_condition ".correlationId == \"$LAST_REQUEST_CORRELATION_ID\""
 }
 
 is_api_available() {
@@ -264,6 +307,12 @@ request GET "/api/promotions/applications/$APP_NAME/environments/status"
 assert_status 200
 assert_json_condition ".applicationName == \"$APP_NAME\""
 assert_json_condition '.environments | length == 3'
+
+log "7) Error response includes correlationId"
+UNKNOWN_PROMOTION_ID="$(cat /proc/sys/kernel/random/uuid)"
+request GET "/api/promotions/$UNKNOWN_PROMOTION_ID"
+assert_status 404
+assert_error_has_correlation_id
 
 log "Smoke test completed successfully."
 echo "[PASS] All endpoints validated for app '$APP_NAME'"

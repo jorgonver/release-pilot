@@ -4,6 +4,8 @@ internal sealed class OutboxMessageRow
 {
     public Guid Id { get; init; }
 
+    public string CorrelationId { get; init; } = string.Empty;
+
     public string EventType { get; init; } = string.Empty;
 
     public Guid AggregateId { get; init; }
@@ -22,8 +24,13 @@ internal sealed class OutboxMessageRow
 
     public OutboxMessage ToOutboxMessage()
     {
+        var correlationId = string.IsNullOrWhiteSpace(CorrelationId)
+            ? Guid.NewGuid().ToString("N")
+            : CorrelationId;
+
         return new OutboxMessage(
             Id,
+            correlationId,
             EventType,
             AggregateId,
             ToUtcOffset(OccurredAt),

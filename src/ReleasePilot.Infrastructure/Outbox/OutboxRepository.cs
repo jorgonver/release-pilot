@@ -19,6 +19,7 @@ public sealed class OutboxRepository : IOutboxRepository
         const string sql = """
             INSERT INTO outbox_messages (
                 id,
+                correlation_id,
                 event_type,
                 aggregate_id,
                 occurred_at,
@@ -30,6 +31,7 @@ public sealed class OutboxRepository : IOutboxRepository
             )
             VALUES (
                 @Id,
+                @CorrelationId,
                 @EventType,
                 @AggregateId,
                 @OccurredAt,
@@ -52,6 +54,7 @@ public sealed class OutboxRepository : IOutboxRepository
         const string sql = """
             SELECT
                 id,
+                correlation_id AS CorrelationId,
                 event_type AS EventType,
                 aggregate_id AS AggregateId,
                 occurred_at AS OccurredAt,
