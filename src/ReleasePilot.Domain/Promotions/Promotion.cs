@@ -1,5 +1,6 @@
 using ReleasePilot.Api.Domain.Primitives;
 using ReleasePilot.Api.Domain.Promotions.Events;
+using ReleasePilot.Domain.Primitives;
 
 namespace ReleasePilot.Api.Domain.Promotions;
 

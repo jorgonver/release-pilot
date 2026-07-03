@@ -1,4 +1,6 @@
-namespace ReleasePilot.Api.Domain.Primitives;
+using ReleasePilot.Api.Domain.Primitives;
+
+namespace ReleasePilot.Domain.Primitives;
 
 public abstract class AggregateRoot
 {
