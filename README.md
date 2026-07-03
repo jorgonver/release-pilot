@@ -187,6 +187,35 @@ Notes:
 - The script auto-starts the API if it is not running and stops it after completion if it started it.
 - If `jq` is missing, the script attempts an automatic install when root or passwordless sudo is available.
 
+## External Port Resilience
+
+The API supports two modes for external integrations configured under `ExternalPorts` in `src/ReleasePilot.Api/appsettings.json`:
+
+- `Mode: "Stub"` (default): uses in-memory/no-op adapters for local development.
+- `Mode: "Http"`: uses `HttpClient` adapters with retry, timeout, and circuit-breaker policies.
+
+When `Mode` is `Http`, configure real `BaseUrl` values for:
+
+- `Deployment`
+- `IssueTracker`
+- `Notification`
+
+Each external service has a `Resilience` section you can tune independently:
+
+- `RetryMaxAttempts`
+- `CircuitBreakerMinimumThroughput`
+- `CircuitBreakerSamplingSeconds`
+- `CircuitBreakerBreakSeconds`
+- `CircuitBreakerFailureRatio`
+- `AttemptTimeoutSeconds`
+- `TotalTimeoutSeconds`
+
+Recommended starting point:
+
+- Keep `RetryMaxAttempts` low (`2` or `3`).
+- Use shorter timeouts for synchronous command-path dependencies.
+- Prefer stricter circuit-breaker break durations for non-critical notifications than for read-enrichment dependencies.
+
 ## API Command Examples
 
 Base URL used below:
