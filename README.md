@@ -104,11 +104,33 @@ docker exec -it releasepilot-postgres psql -U releasepilot -d releasepilot -c "S
 
 ## Testing
 
+### Test Strategy (Consistency Rules)
+
+Using bash smoke tests and .NET integration tests together is intentional in this repository.
+
+- Bash smoke tests validate runtime readiness in a real environment (service process, network, DB, and messaging connectivity).
+- .NET integration tests validate application behavior and contracts in CI (middleware, HTTP semantics, error payloads, and endpoint policies).
+
+To keep this consistent, use the following ownership split:
+
+- Smoke tests (`scripts/api-smoke-test.sh`): keep only critical end-to-end happy path checks.
+- Integration tests (`src/ReleasePilot.Api.Tests`): keep deterministic API behavior assertions, including rate limits and response contracts.
+- Unit tests (`src/ReleasePilot.Domain.Tests`, `src/ReleasePilot.Application.Tests`): keep domain and application business rules in isolation.
+
+Avoid duplicating the same scenario across layers unless it is a release-critical path.
+
 Run all unit tests:
 
 ```bash
 cd <repo-root>
 dotnet test src/release-pilot.sln
+```
+
+Run API integration tests:
+
+```bash
+cd <repo-root>
+dotnet test src/ReleasePilot.Api.Tests/ReleasePilot.Api.Tests.csproj
 ```
 
 Run only domain tests:

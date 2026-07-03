@@ -1,4 +1,5 @@
 using ReleasePilot.Api.Application.Abstractions;
+using ReleasePilot.Api.Infrastructure.Logging;
 
 namespace ReleasePilot.Api.Infrastructure.Ports;
 
@@ -13,8 +14,8 @@ public sealed class NoOpDeploymentPort : IDeploymentPort
 
     public Task StartDeploymentAsync(DeploymentRequest request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "NoOp deployment invoked for promotion {PromotionId} ({ApplicationName} {Version}: {Source}->{Target})",
+        InfrastructureLogMessages.NoOpDeploymentInvoked(
+            _logger,
             request.PromotionId,
             request.ApplicationName,
             request.Version,

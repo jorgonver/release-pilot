@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using ReleasePilot.Api.Application.Abstractions;
 using ReleasePilot.Api.Application.Promotions;
 using ReleasePilot.Api.Application.Promotions.Commands;
@@ -20,6 +21,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpGet]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionRead)]
     public async Task<IActionResult> ListPromotions(CancellationToken cancellationToken)
     {
         var result = await _dispatcher.SendQueryAsync<ListPromotionsQuery, IReadOnlyCollection<PromotionDto>>(
@@ -29,6 +31,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpGet("applications")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionRead)]
     public async Task<IActionResult> ListApplications(CancellationToken cancellationToken)
     {
         var result = await _dispatcher.SendQueryAsync<ListApplicationsQuery, IReadOnlyCollection<string>>(
@@ -38,6 +41,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpGet("applications/{applicationName}")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionRead)]
     public async Task<IActionResult> ListByApplication(
         string applicationName,
         [FromQuery] int page = 1,
@@ -51,6 +55,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpGet("applications/{applicationName}/environments/status")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionRead)]
     public async Task<IActionResult> GetEnvironmentStatus(string applicationName, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.SendQueryAsync<GetEnvironmentStatusQuery, EnvironmentStatusResult>(
@@ -60,6 +65,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionRead)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.SendQueryAsync<GetPromotionByIdQuery, PromotionDto?>(
@@ -71,6 +77,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionWrite)]
     public async Task<IActionResult> RequestPromotion([FromBody] RequestPromotionDto request, CancellationToken cancellationToken)
     {
         var command = new RequestPromotionCommand(
@@ -88,6 +95,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/approve")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionTransition)]
     public async Task<IActionResult> Approve(Guid id, [FromBody] ApprovePromotionDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<ApprovePromotionCommand, PromotionCommandResult>(
@@ -97,6 +105,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/start")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionTransition)]
     public async Task<IActionResult> Start(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<StartDeploymentCommand, PromotionCommandResult>(
@@ -106,6 +115,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/complete")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionTransition)]
     public async Task<IActionResult> Complete(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<CompletePromotionCommand, PromotionCommandResult>(
@@ -115,6 +125,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/rollback")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionTransition)]
     public async Task<IActionResult> Rollback(Guid id, [FromBody] RollbackPromotionDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<RollbackPromotionCommand, PromotionCommandResult>(
@@ -124,6 +135,7 @@ public class PromotionController : ControllerBase
     }
 
     [HttpPost("{id:guid}/cancel")]
+    [EnableRateLimiting(ApiServiceCollectionExtensions.RateLimitPolicies.PromotionTransition)]
     public async Task<IActionResult> Cancel(Guid id, [FromBody] ActingUserDto request, CancellationToken cancellationToken)
     {
         var updated = await _dispatcher.SendCommandAsync<CancelPromotionCommand, PromotionCommandResult>(

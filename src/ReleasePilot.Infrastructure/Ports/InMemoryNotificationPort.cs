@@ -1,4 +1,5 @@
 using ReleasePilot.Api.Application.Abstractions;
+using ReleasePilot.Api.Infrastructure.Logging;
 
 namespace ReleasePilot.Api.Infrastructure.Ports;
 
@@ -15,8 +16,8 @@ public sealed class InMemoryNotificationPort : INotificationPort
         PromotionTerminalStateNotification notification,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "Notification stub: Promotion {PromotionId} reached terminal state {TerminalState}. Reason: {Reason}",
+        InfrastructureLogMessages.NotificationStub(
+            _logger,
             notification.PromotionId,
             notification.TerminalState,
             notification.Reason ?? "n/a");

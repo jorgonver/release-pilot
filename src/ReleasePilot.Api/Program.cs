@@ -1,15 +1,27 @@
 using ReleasePilot.Api.Extensions;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace ReleasePilot.Api;
 
-builder.Services
-    .AddApiLayer()
-    .AddApplicationLayer()
-    .AddInfrastructureLayer(builder.Configuration);
+public sealed class Program
+{
+    private Program()
+    {
+    }
 
-var app = builder.Build();
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
 
-app.UseApiLayer();
+        builder.Services
+            .AddApiLayer(builder.Configuration)
+            .AddApplicationLayer()
+            .AddInfrastructureLayer(builder.Configuration);
 
-app.Run();
+        var app = builder.Build();
+
+        app.UseApiLayer();
+
+        app.Run();
+    }
+}
 

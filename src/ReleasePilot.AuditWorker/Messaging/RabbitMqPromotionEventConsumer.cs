@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using ReleasePilot.Api.Application.Promotions.Events;
+using ReleasePilot.AuditWorker.Logging;
 
 namespace ReleasePilot.AuditWorker;
 
@@ -62,7 +63,7 @@ public sealed class RabbitMqPromotionEventConsumer : IPromotionEventConsumer
             consumer: consumer,
             cancellationToken: cancellationToken);
 
-        _logger.LogInformation("Connected to RabbitMQ and consuming queue '{QueueName}'.", _options.RabbitMq.AuditQueueName);
+        AuditWorkerLogMessages.ConnectedToRabbitMq(_logger, _options.RabbitMq.AuditQueueName);
     }
 
     public async ValueTask DisposeAsync()
@@ -152,4 +153,5 @@ public sealed class RabbitMqPromotionEventConsumer : IPromotionEventConsumer
     {
         return channel.BasicNackAsync(deliveryTag, multiple: false, requeue: false, cancellationToken: cancellationToken);
     }
+
 }

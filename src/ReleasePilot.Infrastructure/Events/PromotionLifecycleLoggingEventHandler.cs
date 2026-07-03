@@ -1,4 +1,5 @@
 using ReleasePilot.Api.Application.Abstractions;
+using ReleasePilot.Api.Infrastructure.Logging;
 
 namespace ReleasePilot.Api.Domain.Promotions.Events;
 
@@ -19,8 +20,8 @@ public sealed class PromotionLifecycleLoggingEventHandler :
 
     public Task HandleAsync(PromotionRequestedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "PromotionRequested: {PromotionId} {ApplicationName} {Version} ({Source}->{Target})",
+        InfrastructureLogMessages.PromotionRequested(
+            _logger,
             domainEvent.PromotionId,
             domainEvent.ApplicationName,
             domainEvent.Version,
@@ -32,31 +33,36 @@ public sealed class PromotionLifecycleLoggingEventHandler :
 
     public Task HandleAsync(PromotionApprovedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("PromotionApproved: {PromotionId}", domainEvent.PromotionId);
+        InfrastructureLogMessages.PromotionApproved(_logger, domainEvent.PromotionId);
+
         return Task.CompletedTask;
     }
 
     public Task HandleAsync(DeploymentStartedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("DeploymentStarted: {PromotionId}", domainEvent.PromotionId);
+        InfrastructureLogMessages.DeploymentStarted(_logger, domainEvent.PromotionId);
+
         return Task.CompletedTask;
     }
 
     public Task HandleAsync(PromotionCompletedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("PromotionCompleted: {PromotionId}", domainEvent.PromotionId);
+        InfrastructureLogMessages.PromotionCompleted(_logger, domainEvent.PromotionId);
+
         return Task.CompletedTask;
     }
 
     public Task HandleAsync(PromotionRolledBackDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("PromotionRolledBack: {PromotionId}, Reason: {Reason}", domainEvent.PromotionId, domainEvent.Reason);
+        InfrastructureLogMessages.PromotionRolledBack(_logger, domainEvent.PromotionId, domainEvent.Reason);
+
         return Task.CompletedTask;
     }
 
     public Task HandleAsync(PromotionCancelledDomainEvent domainEvent, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("PromotionCancelled: {PromotionId}", domainEvent.PromotionId);
+        InfrastructureLogMessages.PromotionCancelled(_logger, domainEvent.PromotionId);
+
         return Task.CompletedTask;
     }
 }
