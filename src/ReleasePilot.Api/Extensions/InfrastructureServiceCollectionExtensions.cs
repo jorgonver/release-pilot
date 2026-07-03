@@ -23,6 +23,7 @@ public static class InfrastructureServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddScoped<IPromotionRepository, PromotionRepository>();
+        services.AddScoped<IIdempotencyStore, IdempotencyStore>();
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddScoped<ICommandTransactionExecutor, CommandTransactionExecutor>();
         services.AddSingleton<IOutboxRepository, OutboxRepository>();

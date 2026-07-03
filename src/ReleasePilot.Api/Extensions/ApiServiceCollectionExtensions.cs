@@ -92,6 +92,7 @@ public static class ApiServiceCollectionExtensions
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseMiddleware<ApiExceptionHandlingMiddleware>();
         app.UseRateLimiter();
+        app.UseMiddleware<IdempotencyMiddleware>();
         app.MapControllers();
 
         return app;

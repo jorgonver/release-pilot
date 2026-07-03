@@ -193,16 +193,24 @@ Base URL used below:
 
 ```bash
 BASE_URL=http://localhost:5252
+IDEMPOTENCY_KEY=$(cat /proc/sys/kernel/random/uuid)
 ```
 
 Command endpoints return a write acknowledgement payload (`{"id":"..."}`), not the full promotion read model.
 Use query endpoints (for example `GET /api/promotions/{id}`) to read current status.
+
+Idempotency support for command endpoints:
+
+- For `POST /api/promotions*` endpoints, send `Idempotency-Key` to safely retry the same command after network failures.
+- Reusing the same key with the same payload replays the original successful response.
+- Reusing the same key with a different payload returns `409`.
 
 1. Request promotion (`POST /api/promotions`):
 
 ```bash
 curl -sS -X POST "$BASE_URL/api/promotions" \
 	-H "Content-Type: application/json" \
+	-H "Idempotency-Key: $IDEMPOTENCY_KEY" \
 	-d '{
 		"applicationName": "checkout-service",
 		"version": "1.2.3",
