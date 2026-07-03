@@ -4,4 +4,4 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddAuditWorkerLayer(builder.Configuration);
 
 var host = builder.Build();
-host.Run();
+await host.RunAsync();

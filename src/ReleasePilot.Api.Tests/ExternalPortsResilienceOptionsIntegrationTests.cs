@@ -112,7 +112,7 @@ public sealed class ExternalPortsResilienceOptionsIntegrationTests
             scope.ServiceProvider.GetRequiredService<INotificationPort>());
     }
 
-    private static IReadOnlyDictionary<string, string?> CreateModeOverrides(string mode)
+    private static Dictionary<string, string?> CreateModeOverrides(string mode)
     {
         return new Dictionary<string, string?>
         {

@@ -31,4 +31,20 @@ public sealed class RabbitMqSettings
     public string AuditQueueName { get; set; } = "releasepilot.audit";
 
     public string AuditBindingKey { get; set; } = "promotion.#";
+
+    public int MaxProcessingRetries { get; set; } = 3;
+
+    public string RetryExchange { get; set; } = "releasepilot.promotions.retry";
+
+    public string RetryQueueName { get; set; } = "releasepilot.audit.retry";
+
+    public string RetryRoutingKey { get; set; } = "promotion.audit.retry";
+
+    public int RetryDelaySeconds { get; set; } = 10;
+
+    public string DeadLetterExchange { get; set; } = "releasepilot.promotions.dlx";
+
+    public string DeadLetterQueueName { get; set; } = "releasepilot.audit.dlq";
+
+    public string DeadLetterRoutingKey { get; set; } = "promotion.audit.dead";
 }

@@ -216,6 +216,28 @@ Recommended starting point:
 - Use shorter timeouts for synchronous command-path dependencies.
 - Prefer stricter circuit-breaker break durations for non-critical notifications than for read-enrichment dependencies.
 
+## Audit Worker Retry and Dead-Letter
+
+`ReleasePilot.AuditWorker` uses bounded retries with delayed reprocessing and dead-letter routing for failed event handling.
+
+Flow for each consumed audit message:
+
+- If processing succeeds: message is acknowledged.
+- If processing fails and retry count is below `MaxProcessingRetries`: message is republished to the retry exchange.
+- Retry queue applies delay via TTL (`RetryDelaySeconds`) and then dead-letters back to the main promotion exchange using the audit binding key.
+- If processing fails at max retries: message is published to dead-letter exchange/queue and removed from the main flow.
+
+Audit worker RabbitMQ settings (`src/ReleasePilot.AuditWorker/appsettings.json`):
+
+- `MaxProcessingRetries`
+- `RetryExchange`
+- `RetryQueueName`
+- `RetryRoutingKey`
+- `RetryDelaySeconds`
+- `DeadLetterExchange`
+- `DeadLetterQueueName`
+- `DeadLetterRoutingKey`
+
 ## API Command Examples
 
 Base URL used below:
